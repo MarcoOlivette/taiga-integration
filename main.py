@@ -4,7 +4,8 @@ Taiga Integration API - Main Application
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from routes import taiga_routes
+from routes import taiga_routes, favorites_routes
+from app.database import init_db
 import os
 
 app = FastAPI(
@@ -22,8 +23,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database
+init_db()
+
 # Include routers
 app.include_router(taiga_routes.router, prefix="/api", tags=["taiga"])
+app.include_router(favorites_routes.router, prefix="/api", tags=["favorites"])
 
 # Serve static files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
