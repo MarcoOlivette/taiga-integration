@@ -120,6 +120,34 @@ async function loadProjects() {
     }
 }
 
+// Favorites Management
+const favoritesManager = {
+    key: 'taiga_favorite_projects',
+
+    getFavorites() {
+        const saved = localStorage.getItem(this.key);
+        return saved ? JSON.parse(saved) : [];
+    },
+
+    isFavorite(projectId) {
+        return this.getFavorites().includes(projectId);
+    },
+
+    toggle(projectId) {
+        const favorites = this.getFavorites();
+        const index = favorites.indexOf(projectId);
+
+        if (index > -1) {
+            favorites.splice(index, 1);
+        } else {
+            favorites.push(projectId);
+        }
+
+        localStorage.setItem(this.key, JSON.stringify(favorites));
+        return index === -1; // Return true if now favorite
+    }
+};
+
 function renderProjects(projects) {
     const grid = document.getElementById('projectsGrid');
 
@@ -138,9 +166,29 @@ function renderProjects(projects) {
         return;
     }
 
-    grid.innerHTML = projects.map(project => `
-        <div class="project-card" data-project-id="${project.id}">
-            <h3>${escapeHtml(project.name)}</h3>
+    // Sort projects: favorites first
+    const sortedProjects = [...projects].sort((a, b) => {
+        const aFav = favoritesManager.isFavorite(a.id);
+        const bFav = favoritesManager.isFavorite(b.id);
+        if (aFav && !bFav) return -1;
+        if (!aFav && bFav) return 1;
+        return 0;
+    });
+
+    grid.innerHTML = sortedProjects.map(project => {
+        const isFavorite = favoritesManager.isFavorite(project.id);
+        return `
+        <div class="project-card ${isFavorite ? 'favorite' : ''}" data-project-id="${project.id}">
+            <div class="project-header">
+                <h3>${escapeHtml(project.name)}</h3>
+                <button class="favorite-btn ${isFavorite ? 'active' : ''}" 
+                        data-project-id="${project.id}"
+                        title="${isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}">
+                    <svg viewBox="0 0 24 24" fill="${isFavorite ? 'currentColor' : 'none'}" stroke="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </button>
+            </div>
             <p>${escapeHtml(project.description || 'Sem descrição')}</p>
             <div class="project-meta">
                 <div class="project-meta-item">
@@ -159,13 +207,46 @@ function renderProjects(projects) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
-    // Add click handlers
+    // Add click handlers for cards
     grid.querySelectorAll('.project-card').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', (e) => {
+            // Don't trigger if clicking favorite button
+            if (e.target.closest('.favorite-btn')) return;
+
             const projectId = card.dataset.projectId;
             selectProject(projectId);
+        });
+    });
+
+    // Add click handlers for favorite buttons
+    grid.querySelectorAll('.favorite-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent card click
+            const projectId = parseInt(btn.dataset.projectId);
+            const isFavorite = favoritesManager.toggle(projectId);
+
+            // Update button state
+            btn.classList.toggle('active', isFavorite);
+            btn.title = isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos';
+
+            // Update SVG fill
+            const svg = btn.querySelector('svg');
+            svg.setAttribute('fill', isFavorite ? 'currentColor' : 'none');
+
+            // Update card class
+            const card = btn.closest('.project-card');
+            card.classList.toggle('favorite', isFavorite);
+
+            // Re-render to re-sort
+            renderProjects(appState.projects);
+
+            showToast(
+                isFavorite ? 'Projeto adicionado aos favoritos' : 'Projeto removido dos favoritos',
+                'success'
+            );
         });
     });
 }
@@ -353,35 +434,33 @@ async function searchUserStoriesAPI(query) {
     try {
         showLoading();
 
-        // Call search API
-        const response = await fetch(
-            `/api/projects/${appState.currentProject.id}/userstories/search?q=${encodeURIComponent(query)}&milestone=null&page_size=100`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${taigaAPI.authToken}`,
-                    'Content-Type': 'application/json'
-                }
+        // Use the Taiga API directly with pagination parameters
+        const url = `${config.getApiUrl()}/userstories?project=${appState.currentProject.id}&q=${encodeURIComponent(query)}&milestone=null&page_size=100`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${taigaAPI.authToken}`,
+                'Content-Type': 'application/json'
             }
-        );
+        });
 
         if (!response.ok) {
             throw new Error('Erro ao buscar user stories');
         }
 
-        const result = await response.json();
+        const stories = await response.json();
 
-        if (result.success) {
-            const { stories, pagination } = result.data;
+        // Get pagination info from headers
+        const totalCount = parseInt(response.headers.get('x-pagination-count') || stories.length);
 
-            // Update UI with search results
-            renderUserStories(stories);
+        // Update UI with search results
+        renderUserStories(stories);
 
-            // Show pagination info
-            if (pagination.total > 0) {
-                showToast(`${pagination.total} user story(ies) encontrada(s)`, 'info');
-            } else {
-                showToast('Nenhuma user story encontrada', 'warning');
-            }
+        // Show pagination info
+        if (totalCount > 0) {
+            showToast(`${totalCount} user story(ies) encontrada(s)`, 'info');
+        } else {
+            showToast('Nenhuma user story encontrada', 'warning');
         }
     } catch (error) {
         console.error('Search error:', error);
