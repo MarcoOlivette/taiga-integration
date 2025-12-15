@@ -38,6 +38,50 @@
           <div class="user-info" id="userInfo" style="display: none">
             <div class="user-avatar" id="userAvatar"></div>
             <span class="user-name" id="userName"></span>
+            <button
+              class="btn-theme"
+              id="themeToggleBtn"
+              title="Alternar Tema"
+              style="
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: var(--text-secondary);
+                padding: 5px;
+                margin-right: 8px;
+                border-radius: 50%;
+                transition: all 0.2s;
+              "
+            >
+              <svg
+                class="theme-icon-light"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                style="width: 20px; height: 20px; display: block"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+              <svg
+                class="theme-icon-dark"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                style="width: 20px; height: 20px; display: none"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+            </button>
             <button class="btn-logout" id="logoutBtn">Sair</button>
           </div>
         </div>
@@ -264,6 +308,48 @@
                 title="Atribuir este usuário a todas as tarefas listadas"
               >
                 Vincular a Todos
+              </button>
+            </div>
+          </div>
+
+          <div class="bulk-assign-section" style="margin-top: 1.5rem">
+            <div class="bulk-label">
+              <div
+                class="bulk-icon-wrapper"
+                style="
+                  color: var(--warning);
+                  background: rgba(245, 158, 11, 0.1);
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  style="width: 20px; height: 20px; stroke-width: 2"
+                >
+                  <path d="M9 11l3 3L22 4"></path>
+                  <path
+                    d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"
+                  ></path>
+                </svg>
+              </div>
+              Status em Massa
+            </div>
+            <div class="bulk-controls">
+              <div id="bulkStatusContainer" style="flex: 1">
+                <!-- Populated via JS -->
+              </div>
+              <button
+                class="btn btn-primary"
+                id="applyBulkStatusBtn"
+                style="
+                  background-color: var(--warning);
+                  border-color: var(--warning);
+                  color: white;
+                "
+                title="Aplicar status a todas as tarefas"
+              >
+                Alterar Status
               </button>
             </div>
           </div>
