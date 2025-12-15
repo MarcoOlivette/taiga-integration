@@ -1134,27 +1134,28 @@ async function saveTask(card) {
         return;
     }
 
-    const taskData = {
-        subject,
-        description,
-        project: appState.currentProject.id,
-        status: status || appState.taskStatuses[0]?.id,
-    };
-
-    if (appState.currentStory) {
-        taskData.user_story = appState.currentStory.id;
-    }
-
-    // Always send assigned_to, even if null (to allow unassignment)
-    if (assignedTo) {
-        taskData.assigned_to = parseInt(assignedTo);
-    } else {
-        taskData.assigned_to = null;
-    }
-
     showLoading();
     try {
         if (isNew) {
+            // For new tasks, send all fields
+            const taskData = {
+                subject,
+                description,
+                project: appState.currentProject.id,
+                status: status || appState.taskStatuses[0]?.id,
+            };
+
+            if (appState.currentStory) {
+                taskData.user_story = appState.currentStory.id;
+            }
+
+            // Always send assigned_to, even if null (to allow unassignment)
+            if (assignedTo) {
+                taskData.assigned_to = parseInt(assignedTo);
+            } else {
+                taskData.assigned_to = null;
+            }
+
             const newTask = await taigaAPI.createTask(taskData);
             showToast('Tarefa criada com sucesso!', 'success');
 
@@ -1162,9 +1163,33 @@ async function saveTask(card) {
             card.remove();
             await loadTasks(appState.currentProject.id, appState.currentStory?.id);
         } else {
-            // Add version for OCC (Optimistic Concurrency Control)
+            // For existing tasks, use partial PATCH - only send changed fields
+            const taskData = {};
+
+            // Always include version for OCC
             const version = parseInt(card.dataset.taskVersion) || 1;
             taskData.version = version;
+
+            // Only include fields that are present in the form and not empty
+            if (subject) {
+                taskData.subject = subject;
+            }
+
+            // Only include description if it's not empty (user actually filled it)
+            if (description) {
+                taskData.description = description;
+            }
+
+            if (status) {
+                taskData.status = parseInt(status);
+            }
+
+            // Include assigned_to (null is valid for unassignment)
+            if (assignedTo) {
+                taskData.assigned_to = parseInt(assignedTo);
+            } else if (card.querySelector('.task-assigned').value === '') {
+                taskData.assigned_to = null;
+            }
 
             await taigaAPI.updateTask(parseInt(taskId), taskData);
             showToast('Tarefa atualizada com sucesso!', 'success');
