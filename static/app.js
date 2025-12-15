@@ -6,60 +6,11 @@ import { taigaAPI } from './js/core/api.js';
 import { state, setState, getState, resetState } from './js/core/state.js';
 // Import UI components
 import { showScreen, showLoading, showToast, showError, hideError } from './js/components/ui.js';
+// Import auth component
+import { initAuth } from './js/components/auth.js';
 
 // UI Helper Functions moved to js/components/ui.js
-
-// Login Handler
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideError('loginError');
-
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const taigaUrl = document.getElementById('taigaUrl').value;
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const btnText = submitBtn.querySelector('.btn-text');
-    const spinner = submitBtn.querySelector('.spinner');
-
-    btnText.style.display = 'none';
-    spinner.style.display = 'block';
-    submitBtn.disabled = true;
-
-    try {
-        await taigaAPI.login(username, password, taigaUrl);
-
-        // Update user info in header
-        const userInfo = document.getElementById('userInfo');
-        const userName = document.getElementById('userName');
-        const userAvatar = document.getElementById('userAvatar');
-
-        userName.textContent = taigaAPI.currentUser.full_name || taigaAPI.currentUser.username;
-        userAvatar.textContent = (taigaAPI.currentUser.full_name || taigaAPI.currentUser.username).charAt(0).toUpperCase();
-        userInfo.style.display = 'flex';
-
-        showToast('Login realizado com sucesso!', 'success');
-
-        // Load projects
-        await loadProjects();
-        showScreen('projectsScreen');
-    } catch (error) {
-        showError('loginError', error.message);
-    } finally {
-        btnText.style.display = 'block';
-        spinner.style.display = 'none';
-        submitBtn.disabled = false;
-    }
-});
-
-// Logout Handler
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-    await taigaAPI.logout();
-    document.getElementById('userInfo').style.display = 'none';
-    document.getElementById('loginForm').reset();
-    showScreen('loginScreen');
-    showToast('Logout realizado com sucesso', 'info');
-});
+// Auth handlers moved to js/components/auth.js
 
 // Load Projects
 async function loadProjects() {
@@ -73,6 +24,8 @@ async function loadProjects() {
         showLoading(false);
     }
 }
+// Expose loadProjects globally for auth module (temporary until projects module is created)
+window.loadProjects = loadProjects;
 
 // Favorites Management
 const favoritesManager = {
@@ -1465,25 +1418,5 @@ function updateThemeIcon(theme) {
 
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('taiga_current_user');
-    if (taigaAPI.authToken && savedUser) {
-        taigaAPI.currentUser = JSON.parse(savedUser);
-
-        // Update user info in header
-        const userInfo = document.getElementById('userInfo');
-        const userName = document.getElementById('userName');
-        const userAvatar = document.getElementById('userAvatar');
-
-        userName.textContent = taigaAPI.currentUser.full_name || taigaAPI.currentUser.username;
-        userAvatar.textContent = (taigaAPI.currentUser.full_name || taigaAPI.currentUser.username).charAt(0).toUpperCase();
-        userInfo.style.display = 'flex';
-
-        // Load projects
-        loadProjects();
-        showScreen('projectsScreen');
-    } else {
-        // Set default Taiga URL
-        document.getElementById('taigaUrl').value = config.getApiUrl();
-    }
+    initAuth();
 });
