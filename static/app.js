@@ -625,7 +625,9 @@ function createTaskForm(task = {}) {
         <select class="task-assigned">
             <option value="">Não atribuído</option>
             ${appState.projectMembers.map(member => `
-                <option value="${member.user}" ${task.assigned_to === member.user ? 'selected' : ''}>${escapeHtml(member.full_name_display)}</option>
+                <option value="${member.user}" ${task.assigned_to === member.user ? 'selected' : ''}>
+                    ${escapeHtml(member.full_name_display)}${member.role_name ? ` (${member.role_name})` : ''}
+                </option>
             `).join('')}
         </select>
         <div style="display: flex; gap: 0.5rem;">
