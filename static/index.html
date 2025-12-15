@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Gerenciador de tarefas em massa para Taiga - Crie e edite múltiplas tarefas de forma eficiente"
+    />
+    <title>Taiga Bulk Task Manager</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="header-content">
+          <h1 class="logo">
+            <svg
+              class="logo-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            Taiga Bulk Manager
+          </h1>
+          <div class="user-info" id="userInfo" style="display: none">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span class="user-name" id="userName"></span>
+            <button class="btn-logout" id="logoutBtn">Sair</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <!-- Login Screen -->
+        <div class="screen active" id="loginScreen">
+          <div class="login-card">
+            <div class="login-header">
+              <h2>Conectar ao Taiga</h2>
+              <p>Faça login para gerenciar suas tarefas</p>
+            </div>
+            <form id="loginForm" class="login-form">
+              <div class="form-group">
+                <label for="taigaUrl">URL do Taiga</label>
+                <input
+                  type="url"
+                  id="taigaUrl"
+                  placeholder="https://api.taiga.io/api/v1"
+                  required
+                />
+                <small
+                  >URL da API do seu Taiga (ex:
+                  https://api.taiga.io/api/v1)</small
+                >
+              </div>
+              <div class="form-group">
+                <label for="username">Usuário ou Email</label>
+                <input
+                  type="text"
+                  id="username"
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="password">Senha</label>
+                <input
+                  type="password"
+                  id="password"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary btn-large">
+                <span class="btn-text">Conectar</span>
+                <div class="spinner" style="display: none"></div>
+              </button>
+              <div
+                class="error-message"
+                id="loginError"
+                style="display: none"
+              ></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Projects Screen -->
+        <div class="screen" id="projectsScreen">
+          <div class="screen-header">
+            <h2>Meus Projetos</h2>
+            <p>Selecione um projeto para gerenciar tarefas</p>
+          </div>
+          <div class="search-box">
+            <svg
+              class="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              id="projectSearch"
+              placeholder="Buscar projetos..."
+            />
+          </div>
+          <div class="projects-grid" id="projectsGrid">
+            <!-- Projects will be loaded here -->
+          </div>
+        </div>
+
+        <!-- User Stories Screen -->
+        <div class="screen" id="userStoriesScreen">
+          <div class="screen-header">
+            <button class="btn-back" id="backToProjects">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Voltar
+            </button>
+            <div>
+              <h2 id="projectTitle">User Stories</h2>
+              <p id="projectDescription">Selecione uma User Story ou Épico</p>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="userstories">
+              User Stories
+            </button>
+            <button class="tab" data-tab="epics">Épicos</button>
+          </div>
+
+          <div class="search-box">
+            <svg
+              class="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              id="usSearch"
+              placeholder="Buscar user stories ou épicos..."
+            />
+          </div>
+
+          <div class="tab-content active" id="userStoriesTab">
+            <div class="stories-list" id="storiesList">
+              <!-- User stories will be loaded here -->
+            </div>
+          </div>
+
+          <div class="tab-content" id="epicsTab">
+            <div class="stories-list" id="epicsList">
+              <!-- Epics will be loaded here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tasks Screen -->
+        <div class="screen" id="tasksScreen">
+          <div class="screen-header">
+            <button class="btn-back" id="backToStories">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Voltar
+            </button>
+            <div>
+              <h2 id="storyTitle">Tarefas</h2>
+              <p id="storyDescription">Gerencie tarefas em massa</p>
+            </div>
+          </div>
+
+          <div class="tasks-actions">
+            <button class="btn btn-primary" id="addTaskBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Adicionar Tarefa
+            </button>
+            <button
+              class="btn btn-success"
+              id="saveAllTasksBtn"
+              style="display: none"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path
+                  d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              Salvar Todas
+            </button>
+          </div>
+
+          <div class="tasks-container" id="tasksContainer">
+            <!-- Existing tasks will be loaded here -->
+          </div>
+
+          <div class="new-tasks-container" id="newTasksContainer">
+            <!-- New tasks will be added here -->
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <p>Carregando...</p>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
