@@ -612,6 +612,27 @@ function createTaskCard(task, isNew = false) {
     `;
 }
 
+// Sort members: current user first, then alphabetically
+function getSortedMembers() {
+    if (!appState.projectMembers) return [];
+
+    const members = [...appState.projectMembers];
+    const currentUserId = appState.currentUser?.id;
+
+    return members.sort((a, b) => {
+        // Current user always first
+        if (currentUserId) {
+            if (a.user === currentUserId) return -1;
+            if (b.user === currentUserId) return 1;
+        }
+
+        // Then sort alphabetically by full_name
+        const nameA = (a.full_name || a.full_name_display || '').toLowerCase();
+        const nameB = (b.full_name || b.full_name_display || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+}
+
 function createTaskForm(task = {}) {
     return `
         <input type="text" class="task-subject" placeholder="Título da tarefa" value="${escapeHtml(task.subject || '')}" required>
@@ -622,14 +643,32 @@ function createTaskForm(task = {}) {
                 <option value="${status.id}" ${task.status === status.id ? 'selected' : ''}>${escapeHtml(status.name)}</option>
             `).join('')}
         </select>
-        <select class="task-assigned">
-            <option value="">Não atribuído</option>
-            ${appState.projectMembers.map(member => `
-                <option value="${member.user}" ${task.assigned_to === member.user ? 'selected' : ''}>
-                    ${escapeHtml(member.full_name_display)}${member.role_name ? ` (${member.role_name})` : ''}
-                </option>
-            `).join('')}
-        </select>
+        <div class="member-select-container">
+            <input 
+                type="text" 
+                class="member-search" 
+                placeholder="🔍 Buscar membro..."
+                autocomplete="off"
+            />
+            <select class="task-assigned" size="8">
+                <option value="">Não atribuído</option>
+                ${getSortedMembers().map(member => {
+        const isCurrentUser = appState.currentUser && member.user === appState.currentUser.id;
+        const displayName = member.full_name || member.full_name_display || 'Sem nome';
+        const star = isCurrentUser ? '⭐ ' : '';
+        return `
+                        <option 
+                            value="${member.user}" 
+                            ${task.assigned_to === member.user ? 'selected' : ''}
+                            data-search="${displayName.toLowerCase()} ${member.role_name?.toLowerCase() || ''}"
+                            style="${isCurrentUser ? 'font-weight: bold; background: #f0f7ff;' : ''}"
+                        >
+                            ${star}${escapeHtml(displayName)}${member.role_name ? ` (${member.role_name})` : ''}
+                        </option>
+                    `;
+    }).join('')}
+            </select>
+        </div>
         <div style="display: flex; gap: 0.5rem;">
             <button class="btn btn-primary save-task">Salvar</button>
             <button class="btn cancel-task">Cancelar</button>
@@ -680,6 +719,29 @@ function attachTaskEventListeners(container) {
             if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
                 await deleteTask(e.target.closest('.task-card'));
             }
+        });
+    });
+
+    // Member search
+    container.querySelectorAll('.member-search').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const select = e.target.nextElementSibling;
+            const options = select.querySelectorAll('option');
+
+            options.forEach(option => {
+                if (option.value === '') {
+                    option.style.display = ''; // Always show "Não atribuído"
+                    return;
+                }
+
+                const searchData = option.getAttribute('data-search') || '';
+                if (searchData.includes(searchTerm)) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
         });
     });
 }
