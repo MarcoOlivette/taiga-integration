@@ -232,10 +232,15 @@ def bulk_create_tasks(bulk_data: BulkTaskCreate):
 def create_tasks_for_user_story(
     project_id: int,
     user_story_id: int,
-    tasks: List[Dict[str, str]] = Body(..., example=[
-        {"subject": "Tarefa A", "description": "Descrição da tarefa A"},
-        {"subject": "Tarefa B", "description": "Descrição da tarefa B"},
-        {"subject": "Tarefa C", "description": "Descrição da tarefa C"}
+    tasks: List[Dict[str, str]] = Body(..., examples=[
+        {
+            "summary": "Example tasks list",
+            "value": [
+                {"subject": "Tarefa A", "description": "Descrição da tarefa A"},
+                {"subject": "Tarefa B", "description": "Descrição da tarefa B"},
+                {"subject": "Tarefa C", "description": "Descrição da tarefa C"}
+            ]
+        }
     ]),
     status_id: Optional[int] = None,
     assigned_to_id: Optional[int] = None
