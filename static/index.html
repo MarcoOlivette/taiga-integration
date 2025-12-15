@@ -229,6 +229,23 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- Task Details Modal -->
+    <div class="modal-overlay" id="taskDetailsModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTaskTitle">Detalhes da Tarefa</h3>
+          <button class="modal-close" id="closeTaskModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body" id="modalTaskBody">
+          <!-- Task details will be loaded here -->
+        </div>
+      </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-spinner"></div>

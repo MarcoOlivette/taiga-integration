@@ -592,13 +592,14 @@ function createTaskCard(task, isNew = false) {
             <div class="task-header">
                 ${task.ref ? `<div class="task-ref">#${task.ref}</div>` : '<div class="task-ref">Nova</div>'}
                 <div class="task-actions">
+                    ${!isNew ? '<button class="view-task-details">Ver Detalhes</button>' : ''}
                     <button class="edit-task">Editar</button>
                     <button class="delete delete-task">Excluir</button>
                 </div>
             </div>
             <div class="task-view">
                 <h4>${escapeHtml(task.subject || 'Nova Tarefa')}</h4>
-                ${task.description ? `<p>${escapeHtml(task.description)}</p>` : ''}
+                ${task.description ? `<p class="task-description-preview">${escapeHtml(task.description.substring(0, 100))}${task.description.length > 100 ? '...' : ''}</p>` : ''}
                 <div class="task-meta">
                     ${task.status_extra_info ? `<div class="task-meta-item" style="background: ${task.status_extra_info.color}">${escapeHtml(task.status_extra_info.name)}</div>` : ''}
                     ${task.assigned_to_extra_info ? `<div class="task-meta-item">👤 ${escapeHtml(task.assigned_to_extra_info.full_name_display)}</div>` : ''}
@@ -635,6 +636,15 @@ function createTaskForm(task = {}) {
 }
 
 function attachTaskEventListeners(container) {
+    // View Details buttons
+    container.querySelectorAll('.view-task-details').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const card = e.target.closest('.task-card');
+            const taskId = parseInt(card.dataset.taskId);
+            await showTaskDetails(taskId);
+        });
+    });
+
     // Edit buttons
     container.querySelectorAll('.edit-task').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -671,6 +681,75 @@ function attachTaskEventListeners(container) {
         });
     });
 }
+
+// Show Task Details Modal
+async function showTaskDetails(taskId) {
+    showLoading();
+    try {
+        const task = await taigaAPI.getTask(taskId);
+
+        const modal = document.getElementById('taskDetailsModal');
+        const modalTitle = document.getElementById('modalTaskTitle');
+        const modalBody = document.getElementById('modalTaskBody');
+
+        modalTitle.textContent = `#${task.ref}: ${task.subject}`;
+
+        modalBody.innerHTML = `
+            <div class="task-detail-section">
+                <h4>📝 Descrição</h4>
+                <div class="task-detail-content">
+                    ${task.description ? escapeHtml(task.description).replace(/\n/g, '<br>') : '<em>Sem descrição</em>'}
+                </div>
+            </div>
+            
+            <div class="task-detail-section">
+                <h4>ℹ️ Informações</h4>
+                <div class="task-detail-grid">
+                    <div class="task-detail-item">
+                        <span class="task-detail-label">Status:</span>
+                        <span class="task-detail-value" style="background: ${task.status_extra_info?.color || '#666'}; padding: 4px 8px; border-radius: 4px;">
+                            ${task.status_extra_info?.name || 'N/A'}
+                        </span>
+                    </div>
+                    <div class="task-detail-item">
+                        <span class="task-detail-label">Atribuído a:</span>
+                        <span class="task-detail-value">
+                            ${task.assigned_to_extra_info?.full_name_display || 'Não atribuído'}
+                        </span>
+                    </div>
+                    <div class="task-detail-item">
+                        <span class="task-detail-label">User Story:</span>
+                        <span class="task-detail-value">
+                            ${task.user_story ? `#${task.user_story}` : 'N/A'}
+                        </span>
+                    </div>
+                    <div class="task-detail-item">
+                        <span class="task-detail-label">ID da Tarefa:</span>
+                        <span class="task-detail-value">${task.id}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modal.classList.add('active');
+    } catch (error) {
+        showToast('Erro ao carregar detalhes da tarefa: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Close Task Details Modal
+document.getElementById('closeTaskModal').addEventListener('click', () => {
+    document.getElementById('taskDetailsModal').classList.remove('active');
+});
+
+// Close modal when clicking outside
+document.getElementById('taskDetailsModal').addEventListener('click', (e) => {
+    if (e.target.id === 'taskDetailsModal') {
+        document.getElementById('taskDetailsModal').classList.remove('active');
+    }
+});
 
 // Add Task
 document.getElementById('addTaskBtn').addEventListener('click', () => {
