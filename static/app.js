@@ -325,24 +325,78 @@ document.querySelectorAll('.tab').forEach(tab => {
     });
 });
 
-// US/Epic Search
+// US/Epic Search with debounce
+let searchTimeout;
 document.getElementById('usSearch').addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
+    const searchTerm = e.target.value.trim();
 
-    // Filter user stories
-    const filteredStories = appState.userStories.filter(story =>
-        story.subject.toLowerCase().includes(searchTerm) ||
-        (story.description && story.description.toLowerCase().includes(searchTerm))
-    );
-    renderUserStories(filteredStories);
+    // Clear previous timeout
+    clearTimeout(searchTimeout);
 
-    // Filter epics
-    const filteredEpics = appState.epics.filter(epic =>
-        epic.subject.toLowerCase().includes(searchTerm) ||
-        (epic.description && epic.description.toLowerCase().includes(searchTerm))
-    );
-    renderEpics(filteredEpics);
+    // If empty, show all loaded stories
+    if (!searchTerm) {
+        renderUserStories(appState.userStories);
+        renderEpics(appState.epics);
+        return;
+    }
+
+    // Debounce search (wait 300ms after user stops typing)
+    searchTimeout = setTimeout(async () => {
+        await searchUserStoriesAPI(searchTerm);
+    }, 300);
 });
+
+// Search user stories using paginated API
+async function searchUserStoriesAPI(query) {
+    if (!appState.currentProject) return;
+
+    try {
+        showLoading();
+
+        // Call search API
+        const response = await fetch(
+            `/api/projects/${appState.currentProject.id}/userstories/search?q=${encodeURIComponent(query)}&milestone=null&page_size=100`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${taigaAPI.authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Erro ao buscar user stories');
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            const { stories, pagination } = result.data;
+
+            // Update UI with search results
+            renderUserStories(stories);
+
+            // Show pagination info
+            if (pagination.total > 0) {
+                showToast(`${pagination.total} user story(ies) encontrada(s)`, 'info');
+            } else {
+                showToast('Nenhuma user story encontrada', 'warning');
+            }
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        showToast('Erro ao buscar: ' + error.message, 'error');
+
+        // Fallback to local search
+        const filteredStories = appState.userStories.filter(story =>
+            story.subject.toLowerCase().includes(query.toLowerCase()) ||
+            (story.description && story.description.toLowerCase().includes(query.toLowerCase()))
+        );
+        renderUserStories(filteredStories);
+    } finally {
+        showLoading(false);
+    }
+}
 
 // Select User Story
 async function selectUserStory(storyId) {

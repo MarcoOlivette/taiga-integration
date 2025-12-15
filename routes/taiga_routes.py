@@ -93,6 +93,36 @@ def get_user_stories(project_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/projects/{project_id}/userstories/search")
+def search_user_stories(
+    project_id: int,
+    q: str = "",
+    milestone: str = "null",
+    page: int = 1,
+    page_size: int = 100
+):
+    """
+    Search user stories with pagination and filters
+    
+    Parameters:
+    - q: Search query (searches in subject/description)
+    - milestone: Filter by milestone ("null" for backlog)
+    - page: Page number (default: 1)
+    - page_size: Items per page (default: 100)
+    """
+    try:
+        result = taiga_service.search_user_stories(
+            project_id=project_id,
+            query=q,
+            milestone=milestone,
+            page=page,
+            page_size=page_size
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/userstories/{story_id}")
 def get_user_story(story_id: int):
     """Get user story by ID"""
