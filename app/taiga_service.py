@@ -178,26 +178,40 @@ class TaigaService:
         """Create a new task"""
         self._ensure_authenticated()
         
-        # Get project to use its add_task method
-        project = self.api.projects.get(project_id)
-        
         # Get required status if not provided
         status = kwargs.get('status')
         if not status:
             # Get first available task status
-            if project.task_statuses:
-                status = project.task_statuses[0].id
+            try:
+                statuses = self.get_task_statuses(project_id)
+                if statuses:
+                    status = statuses[0]['id']
+            except:
+                pass
         
-        # Create task
-        task = project.add_task(
-            subject=subject,
-            status=status,
-            description=kwargs.get('description', ''),
-            assigned_to=kwargs.get('assigned_to'),
-            user_story=kwargs.get('user_story')
+        # Create task via direct API call
+        import requests
+        response = requests.post(
+            f"{self.host}/api/v1/tasks",
+            headers={
+                "Authorization": f"Bearer {self.api.token}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "project": project_id,
+                "subject": subject,
+                "description": kwargs.get('description', ''),
+                "status": status,
+                "assigned_to": kwargs.get('assigned_to'),
+                "user_story": kwargs.get('user_story')
+            },
+            timeout=30
         )
         
-        return self._task_to_dict(task)
+        if response.status_code in [200, 201]:
+            return self._task_to_dict_from_json(response.json())
+        else:
+            raise Exception(f"Failed to create task: {response.status_code} - {response.text[:200]}")
 
     def update_task(self, task_id: int, **kwargs) -> Dict:
         """Update a task"""
@@ -219,18 +233,42 @@ class TaigaService:
         task.delete()
 
     def bulk_create_tasks(self, project_id: int, tasks_data: List[Dict]) -> List[Dict]:
-        """Create multiple tasks"""
-        self._ensure_authenticated()
-        created_tasks = []
+        """
+        Create multiple tasks
         
+        Note: Taiga's native bulk_create endpoint requires milestone_id which is too restrictive.
+        We use the fallback method which creates tasks one by one but is more flexible.
+        """
+        self._ensure_authenticated()
+        return self._bulk_create_fallback(project_id, tasks_data)
+    
+    def _bulk_create_fallback(self, project_id: int, tasks_data: List[Dict]) -> List[Dict]:
+        """Fallback: create tasks one by one"""
+        created_tasks = []
         for task_data in tasks_data:
             try:
                 task = self.create_task(project_id, **task_data)
                 created_tasks.append(task)
             except Exception as e:
                 created_tasks.append({"error": str(e), "data": task_data})
-        
         return created_tasks
+    
+    def _task_to_dict_from_json(self, task_json: Dict) -> Dict:
+        """Convert task JSON response to dict (for bulk_create response)"""
+        return {
+            "id": task_json.get("id"),
+            "ref": task_json.get("ref"),
+            "subject": task_json.get("subject"),
+            "description": task_json.get("description", ""),
+            "status": task_json.get("status"),
+            "status_extra_info": task_json.get("status_extra_info"),
+            "assigned_to": task_json.get("assigned_to"),
+            "assigned_to_extra_info": task_json.get("assigned_to_extra_info"),
+            "user_story": task_json.get("user_story"),
+            "project": task_json.get("project"),
+            "created_date": task_json.get("created_date"),
+            "modified_date": task_json.get("modified_date"),
+        }
 
     # Metadata
     def get_task_statuses(self, project_id: int) -> List[Dict]:
