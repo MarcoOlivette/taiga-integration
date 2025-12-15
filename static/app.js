@@ -775,6 +775,18 @@ document.getElementById('addTaskBtn').addEventListener('click', () => {
     document.getElementById('saveAllTasksBtn').style.display = 'inline-flex';
 });
 
+// Reload Tasks Button
+document.getElementById('reloadTasksBtn').addEventListener('click', async () => {
+    if (!appState.currentStory) {
+        showToast('Nenhuma User Story selecionada', 'warning');
+        return;
+    }
+
+    showToast('Atualizando tarefas...', 'info');
+    await loadTasks(appState.currentProject.id, appState.currentStory.id);
+    showToast('Tarefas atualizadas!', 'success');
+});
+
 // Save Task
 async function saveTask(card) {
     const taskId = card.dataset.taskId;
