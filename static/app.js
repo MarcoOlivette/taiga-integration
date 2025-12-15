@@ -271,6 +271,13 @@ async function selectProject(projectId) {
         document.getElementById('projectTitle').textContent = appState.currentProject.name;
         document.getElementById('projectDescription').textContent = 'Selecione uma User Story ou Épico';
 
+        // Helper to format members
+        if (appState.currentProject.members && appState.currentProject.members.length > 0) {
+            console.log('Caching members from project data', appState.currentProject.members.length);
+            localStorage.setItem('projectMembers', JSON.stringify(appState.currentProject.members));
+            appState.projectMembers = appState.currentProject.members;
+        }
+
         // Load user stories and epics
         await Promise.all([
             loadUserStories(projectId),
@@ -292,9 +299,32 @@ document.getElementById('backToProjects').addEventListener('click', () => {
 });
 
 // Load User Stories
+// Load User Stories
 async function loadUserStories(projectId) {
     try {
-        appState.userStories = await taigaAPI.getUserStories(projectId);
+        const favoriteId = localStorage.getItem('favoriteUserStory');
+
+        // Fetch list and favorite (if exists) in parallel
+        const promises = [taigaAPI.getUserStories(projectId)];
+
+        if (favoriteId) {
+            // Fetch specific favorite story, catch error if not found/access denied
+            promises.push(taigaAPI.getUserStory(favoriteId).catch(() => null));
+        }
+
+        const [stories, favoriteStory] = await Promise.all(promises);
+
+        let allStories = stories;
+
+        // If favorite story exists and belongs to current project
+        if (favoriteStory && String(favoriteStory.project) === String(projectId)) {
+            // Remove favorite from main list if present to avoid duplication
+            allStories = allStories.filter(s => String(s.id) !== String(favoriteStory.id));
+            // Add to beginning of list
+            allStories.unshift(favoriteStory);
+        }
+
+        appState.userStories = allStories;
         renderUserStories(appState.userStories);
     } catch (error) {
         showToast('Erro ao carregar user stories: ' + error.message, 'error');
@@ -611,36 +641,40 @@ async function loadTaskStatuses(projectId) {
 }
 
 async function loadProjectMembers(projectId) {
-    try {
-        const slug = appState.currentProject?.slug;
-        const cacheKey = `project_members_${projectId}`;
+    // If already loaded in state, skip
+    if (appState.projectMembers && appState.projectMembers.length > 0) {
+        return;
+    }
 
-        // Try to load from cache first
-        const cached = localStorage.getItem(cacheKey);
+    try {
+        // Try localStorage 'projectMembers' (the unified key)
+        const cached = localStorage.getItem('projectMembers');
         if (cached) {
             try {
-                const parsed = JSON.parse(cached);
-                // Check if cache is fresh (e.g., less than 1 hour)
-                const cacheTime = parsed.timestamp;
-                const now = Date.now();
-                if (now - cacheTime < 3600000) { // 1 hour
-                    console.log('Using cached members');
-                    appState.projectMembers = parsed.data;
-                    return;
+                const members = JSON.parse(cached);
+                // Simple validation: check if not empty. 
+                // We assume selectProject handles the correct project context and overwrites this key.
+                if (members && members.length > 0) {
+                    // Optional: verify project ID match if available in member object
+                    if (members[0].project && parseInt(members[0].project) !== parseInt(projectId)) {
+                        console.warn('Cached members do not match current project ID');
+                    } else {
+                        console.log('Using cached members from localStorage');
+                        appState.projectMembers = members;
+                        return;
+                    }
                 }
             } catch (e) {
-                localStorage.removeItem(cacheKey);
+                console.error('Error parsing cached members:', e);
             }
         }
 
-        // Fetch from API with slug for full list
+        console.log('Fetching members from API');
+        const slug = appState.currentProject?.slug;
         appState.projectMembers = await taigaAPI.getProjectMembers(projectId, slug);
 
         // Save to cache
-        localStorage.setItem(cacheKey, JSON.stringify({
-            timestamp: Date.now(),
-            data: appState.projectMembers
-        }));
+        localStorage.setItem('projectMembers', JSON.stringify(appState.projectMembers));
 
     } catch (error) {
         console.error('Error loading project members:', error);

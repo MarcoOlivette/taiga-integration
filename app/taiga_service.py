@@ -338,13 +338,31 @@ class TaigaService:
     # Helper methods to convert objects to dicts
     def _project_to_dict(self, project) -> Dict:
         """Convert project object to dict"""
+        members_data = []
+        if hasattr(project, 'members'):
+            members_data = [
+                {
+                    "id": m.id,
+                    "user": m.user,
+                    "full_name_display": m.full_name_display,
+                    "full_name": getattr(m, 'full_name', m.full_name_display),
+                    "role_name": m.role_name,
+                    "role": m.role,
+                    "is_active": getattr(m, 'is_user_active', True),
+                    "photo": getattr(m, 'photo', None),
+                    "username": getattr(m, 'username', None),
+                    "color": getattr(m, 'color', None)
+                }
+                for m in project.members
+            ]
+
         return {
             "id": project.id,
             "name": project.name,
             "slug": project.slug,
             "description": project.description,
             "total_story_points": getattr(project, 'total_story_points', 0),
-            "members": [{"id": m.id, "full_name_display": m.full_name_display} for m in project.members] if hasattr(project, 'members') else []
+            "members": members_data
         }
 
     def _userstory_to_dict(self, story) -> Dict:
