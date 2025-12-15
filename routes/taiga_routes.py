@@ -35,6 +35,15 @@ class BulkTaskCreate(BaseModel):
     tasks: List[TaskCreate]
 
 
+class SimpleBulkTaskCreate(BaseModel):
+    """Simplified model for creating multiple tasks with same project and user story"""
+    project_id: int
+    user_story_id: Optional[int] = None
+    tasks: List[Dict[str, str]]  # List of {subject: str, description: str}
+    status_id: Optional[int] = None
+    assigned_to_id: Optional[int] = None
+
+
 @router.post("/auth/login")
 async def login(credentials: LoginRequest):
     """Authenticate with Taiga"""
@@ -215,6 +224,63 @@ def bulk_create_tasks(bulk_data: BulkTaskCreate):
         tasks_data = [task.dict(exclude={'project'}, exclude_none=True) for task in bulk_data.tasks]
         created_tasks = taiga_service.bulk_create_tasks(project_id, tasks_data)
         return {"success": True, "data": created_tasks}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/projects/{project_id}/userstories/{user_story_id}/tasks/bulk")
+def create_tasks_for_user_story(
+    project_id: int,
+    user_story_id: int,
+    tasks: List[Dict[str, str]] = Body(..., example=[
+        {"subject": "Tarefa A", "description": "Descrição da tarefa A"},
+        {"subject": "Tarefa B", "description": "Descrição da tarefa B"},
+        {"subject": "Tarefa C", "description": "Descrição da tarefa C"}
+    ]),
+    status_id: Optional[int] = None,
+    assigned_to_id: Optional[int] = None
+):
+    """
+    Create multiple tasks for a specific user story
+    
+    Example usage:
+    ```
+    POST /api/projects/133/userstories/5258/tasks/bulk
+    {
+        "tasks": [
+            {"subject": "Tarefa A", "description": "Descrição A"},
+            {"subject": "Tarefa B", "description": "Descrição B"},
+            {"subject": "Tarefa C"}
+        ],
+        "status_id": 123,  # Optional
+        "assigned_to_id": 456  # Optional
+    }
+    ```
+    """
+    try:
+        # Build tasks data
+        tasks_data = []
+        for task in tasks:
+            task_data = {
+                "subject": task.get("subject"),
+                "description": task.get("description", ""),
+                "user_story": user_story_id
+            }
+            
+            if status_id:
+                task_data["status"] = status_id
+            if assigned_to_id:
+                task_data["assigned_to"] = assigned_to_id
+                
+            tasks_data.append(task_data)
+        
+        created_tasks = taiga_service.bulk_create_tasks(project_id, tasks_data)
+        
+        return {
+            "success": True,
+            "message": f"{len(created_tasks)} tasks created successfully",
+            "data": created_tasks
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
