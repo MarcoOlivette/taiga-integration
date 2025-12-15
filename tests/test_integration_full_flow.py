@@ -62,20 +62,21 @@ class TestFullWorkflow:
         print(f"\n✅ Created User Story #{pytest.test_us_ref} (ID: {pytest.test_us_id})")
     
     def test_02_create_two_tasks(self, authenticated_service, test_project_id):
-        """Step 2: Create two tasks in the user story"""
+        """Step 2: Create two tasks WITHOUT description"""
         assert hasattr(pytest, 'test_us_id'), "User story must be created first"
         
+        # Create tasks WITHOUT description initially
         task1 = authenticated_service.create_task(
             project_id=test_project_id,
             subject="[TEST] Task 1 - Integration Test",
-            description="First test task - safe to delete",
+            description="",  # Empty description
             user_story=pytest.test_us_id
         )
         
         task2 = authenticated_service.create_task(
             project_id=test_project_id,
             subject="[TEST] Task 2 - Integration Test",
-            description="Second test task - safe to delete",
+            description="",  # Empty description
             user_story=pytest.test_us_id
         )
         
@@ -88,32 +89,52 @@ class TestFullWorkflow:
         pytest.test_task1_id = task1["id"]
         pytest.test_task2_id = task2["id"]
         
-        print(f"\n✅ Created Task #{task1['ref']} (ID: {pytest.test_task1_id})")
-        print(f"✅ Created Task #{task2['ref']} (ID: {pytest.test_task2_id})")
+        print(f"\n✅ Created Task #{task1['ref']} (ID: {pytest.test_task1_id}) WITHOUT description")
+        print(f"✅ Created Task #{task2['ref']} (ID: {pytest.test_task2_id}) WITHOUT description")
     
-    def test_03_edit_tasks_description(self, authenticated_service):
-        """Step 3: Edit both tasks - update descriptions"""
+    def test_03_add_descriptions(self, authenticated_service):
+        """Step 3: NOW add descriptions via edit (critical test setup)"""
         assert hasattr(pytest, 'test_task1_id'), "Tasks must be created first"
         
-        # Update task 1
+        DESCRIPTION_TASK1 = "CRITICAL TEST: This description must be preserved after status change!"
+        DESCRIPTION_TASK2 = "IMPORTANT: This text validates our bug fix is working!"
+        
+        # Add descriptions via update
         updated_task1 = authenticated_service.update_task(
             pytest.test_task1_id,
-            description="UPDATED: This description was modified by integration test"
+            description=DESCRIPTION_TASK1
         )
         
-        # Update task 2
         updated_task2 = authenticated_service.update_task(
             pytest.test_task2_id,
-            description="UPDATED: This is also updated by integration test"
+            description=DESCRIPTION_TASK2
         )
         
-        assert "UPDATED" in updated_task1["description"]
-        assert "UPDATED" in updated_task2["description"]
+        assert updated_task1["description"] == DESCRIPTION_TASK1
+        assert updated_task2["description"] == DESCRIPTION_TASK2
         
-        print(f"\n✅ Updated descriptions for both tasks")
+        # Store descriptions for later verification
+        pytest.test_task1_description = DESCRIPTION_TASK1
+        pytest.test_task2_description = DESCRIPTION_TASK2
+        
+        print(f"\n✅ Added description to Task 1: '{DESCRIPTION_TASK1[:50]}...'")
+        print(f"✅ Added description to Task 2: '{DESCRIPTION_TASK2[:50]}...'")
     
-    def test_04_change_assignment(self, authenticated_service, test_project_id):
-        """Step 4: Assign tasks to current user"""
+    def test_04_verify_descriptions_before_status_change(self, authenticated_service):
+        """Step 4: Verify descriptions are saved correctly"""
+        assert hasattr(pytest, 'test_task1_id'), "Tasks must be created first"
+        
+        # Fetch tasks again to verify descriptions were saved
+        task1 = authenticated_service.get_task(pytest.test_task1_id)
+        task2 = authenticated_service.get_task(pytest.test_task2_id)
+        
+        assert task1["description"] == pytest.test_task1_description
+        assert task2["description"] == pytest.test_task2_description
+        
+        print(f"\n✅ VERIFIED: Descriptions are correctly saved before status change")
+    
+    def test_05_change_assignment(self, authenticated_service, test_project_id):
+        """Step 5: Assign tasks to current user"""
         assert hasattr(pytest, 'test_task1_id'), "Tasks must be created first"
         
         # Get current user ID
@@ -136,14 +157,14 @@ class TestFullWorkflow:
         
         print(f"\n✅ Assigned both tasks to user ID {current_user_id}")
     
-    def test_05_mark_as_done(self, authenticated_service, test_project_id):
-        """Step 5: Change status to 'Done' or 'Closed'"""
+    def test_06_change_status_and_verify_description(self, authenticated_service, test_project_id):
+        """Step 6: CRITICAL TEST - Change status and verify description is NOT overwritten"""
         assert hasattr(pytest, 'test_task1_id'), "Tasks must be created first"
         
         # Get task statuses for the project
         statuses = authenticated_service.get_task_statuses(test_project_id)
         
-        # Find 'Done' or 'Closed' status (usually the last one or has 'fechado'/'done' in name)
+        # Find 'Done' or 'Closed' status
         done_status = None
         for status in statuses:
             if 'done' in status['name'].lower() or 'fechad' in status['name'].lower() or 'concl' in status['name'].lower():
@@ -156,7 +177,9 @@ class TestFullWorkflow:
         
         assert done_status is not None, "No status found for marking as done"
         
-        # Update both tasks
+        print(f"\n🔄 Changing status to '{done_status['name']}'...")
+        
+        # Update both tasks to new status
         updated_task1 = authenticated_service.update_task(
             pytest.test_task1_id,
             status=done_status['id']
@@ -170,25 +193,32 @@ class TestFullWorkflow:
         assert updated_task1["status"] == done_status['id']
         assert updated_task2["status"] == done_status['id']
         
-        print(f"\n✅ Marked both tasks as '{done_status['name']}'")
-    
-    def test_06_verify_descriptions_preserved(self, authenticated_service):
-        """Step 6: Verify that descriptions were preserved during all edits"""
-        assert hasattr(pytest, 'test_task1_id'), "Tasks must be created first"
+        print(f"✅ Status changed to '{done_status['name']}'")
         
-        # Fetch tasks again to verify descriptions weren't overwritten
+        # ⚠️ CRITICAL TEST: Verify descriptions were NOT overwritten
+        print(f"\n🔍 CRITICAL TEST: Verifying descriptions were preserved...")
+        
+        # Fetch tasks again
         task1 = authenticated_service.get_task(pytest.test_task1_id)
         task2 = authenticated_service.get_task(pytest.test_task2_id)
         
-        # Critical test: descriptions should still contain "UPDATED"
-        assert "UPDATED" in task1["description"], \
-            f"Task 1 description was overwritten! Got: {task1['description']}"
-        assert "UPDATED" in task2["description"], \
-            f"Task 2 description was overwritten! Got: {task2['description']}"
+        # This is the critical assertion - if it fails, the bug fix failed!
+        if task1["description"] != pytest.test_task1_description:
+            print(f"❌ FAILURE: Task 1 description was overwritten!")
+            print(f"   Expected: '{pytest.test_task1_description}'")
+            print(f"   Got: '{task1['description']}'")
+            assert False, "BUG FIX FAILED: Description was overwritten during status change!"
         
-        print(f"\n✅ VERIFIED: Descriptions were preserved through all updates!")
-        print(f"   Task 1 desc: {task1['description'][:50]}...")
-        print(f"   Task 2 desc: {task2['description'][:50]}...")
+        if task2["description"] != pytest.test_task2_description:
+            print(f"❌ FAILURE: Task 2 description was overwritten!")
+            print(f"   Expected: '{pytest.test_task2_description}'")
+            print(f"   Got: '{task2['description']}'")
+            assert False, "BUG FIX FAILED: Description was overwritten during status change!"
+        
+        print(f"✅✅✅ SUCCESS: Descriptions were PRESERVED after status change!")
+        print(f"   Task 1: '{task1['description'][:50]}...'")
+        print(f"   Task 2: '{task2['description'][:50]}...'")
+        print(f"\n🎉 BUG FIX VALIDATED: Our fix is working correctly!")
     
     def test_07_delete_tasks(self, authenticated_service):
         """Step 7: Delete both tasks"""
