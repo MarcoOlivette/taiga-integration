@@ -588,7 +588,7 @@ function renderTasks(tasks) {
 
 function createTaskCard(task, isNew = false) {
     return `
-        <div class="task-card ${isNew ? 'new' : ''}" data-task-id="${task.id || 'new-' + Date.now()}">
+        <div class="task-card ${isNew ? 'new' : ''}" data-task-id="${task.id || 'new-' + Date.now()}" data-task-version="${task.version || 1}">
             <div class="task-header">
                 ${task.ref ? `<div class="task-ref">#${task.ref}</div>` : '<div class="task-ref">Nova</div>'}
                 <div class="task-actions">
@@ -920,6 +920,10 @@ async function saveTask(card) {
             card.remove();
             await loadTasks(appState.currentProject.id, appState.currentStory?.id);
         } else {
+            // Add version for OCC (Optimistic Concurrency Control)
+            const version = parseInt(card.dataset.taskVersion) || 1;
+            taskData.version = version;
+
             await taigaAPI.updateTask(parseInt(taskId), taskData);
             showToast('Tarefa atualizada com sucesso!', 'success');
             await loadTasks(appState.currentProject.id, appState.currentStory?.id);
