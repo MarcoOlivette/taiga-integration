@@ -584,6 +584,9 @@ async function selectUserStory(storyId) {
         if (typeof renderBulkAssignSelect === 'function') {
             renderBulkAssignSelect();
         }
+        if (typeof renderBulkStatusSelect === 'function') {
+            renderBulkStatusSelect();
+        }
     } catch (error) {
         showToast('Erro ao carregar user story: ' + error.message, 'error');
     } finally {
@@ -1359,9 +1362,16 @@ document.getElementById('applyBulkAssignBtn')?.addEventListener('click', async (
         if (task.assigned_to === assignedToId) continue;
 
         try {
+            // Fetch full task details to preserve all fields (especially description)
+            const fullTask = await taigaAPI.getTask(task.id);
+
+            // Update with complete data to avoid overwriting description
             await taigaAPI.updateTask(task.id, {
+                subject: fullTask.subject,
+                description: fullTask.description,
+                status: fullTask.status,
                 assigned_to: assignedToId,
-                version: task.version // OCC
+                version: fullTask.version // OCC
             });
             updatedCount++;
         } catch (e) {
@@ -1452,9 +1462,16 @@ document.getElementById('applyBulkStatusBtn')?.addEventListener('click', async (
         if (task.status === statusId) continue;
 
         try {
+            // Fetch full task details to preserve all fields (especially description)
+            const fullTask = await taigaAPI.getTask(task.id);
+
+            // Update with complete data to avoid overwriting description
             await taigaAPI.updateTask(task.id, {
+                subject: fullTask.subject,
+                description: fullTask.description,
                 status: statusId,
-                version: task.version // OCC
+                assigned_to: fullTask.assigned_to,
+                version: fullTask.version // OCC
             });
             updatedCount++;
         } catch (e) {
