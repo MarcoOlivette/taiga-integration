@@ -90,6 +90,54 @@ class TaigaService:
         self._ensure_authenticated()
         stories = self.api.user_stories.list(project=project_id)
         return [self._userstory_to_dict(s) for s in stories]
+    
+    def search_user_stories(self, project_id: int, query: str = "", milestone: str = "null", 
+                           page: int = 1, page_size: int = 100) -> Dict:
+        """
+        Search user stories with pagination and filters
+        Similar to: /api/v1/userstories?milestone=null&only_ref=true&page=1&page_size=100&project=133&q=teste
+        """
+        self._ensure_authenticated()
+        
+        import requests
+        
+        # Build URL with parameters - use self.host + /api/v1
+        api_url = f"{self.host}/api/v1"
+        url = f"{api_url}/userstories"
+        params = {
+            "project": project_id,
+            "page": page,
+            "page_size": page_size,
+            "milestone": milestone,  # "null" for backlog
+        }
+        
+        if query:
+            params["q"] = query
+        
+        headers = {
+            "Authorization": f"Bearer {self.api.token}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        
+        stories_data = response.json()
+        
+        # Get pagination headers
+        total_count = int(response.headers.get('x-pagination-count', 0))
+        current_page = int(response.headers.get('x-pagination-current', page))
+        total_pages = int(response.headers.get('x-pagination-num-pages', 1))
+        
+        return {
+            "stories": stories_data,
+            "pagination": {
+                "total": total_count,
+                "page": current_page,
+                "page_size": page_size,
+                "total_pages": total_pages
+            }
+        }
 
     def get_user_story(self, story_id: int) -> Dict:
         """Get user story by ID"""
@@ -223,7 +271,7 @@ class TaigaService:
             "id": story.id,
             "ref": story.ref,
             "subject": story.subject,
-            "description": story.description,
+            "description": getattr(story, 'description', ''),
             "status": story.status,
             "status_extra_info": {
                 "name": story.status_extra_info.get('name') if story.status_extra_info else None,
