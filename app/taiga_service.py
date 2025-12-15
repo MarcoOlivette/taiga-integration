@@ -253,8 +253,10 @@ class TaigaService:
         
         # Update attributes
         for key, value in kwargs.items():
-            if value is not None and hasattr(task, key):
-                setattr(task, key, value)
+            if hasattr(task, key):
+                # Allow None specifically for assigned_to to unassign
+                if value is not None or key == 'assigned_to':
+                    setattr(task, key, value)
         
         task.update()
         return self._task_to_dict(task)

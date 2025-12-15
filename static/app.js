@@ -1109,8 +1109,11 @@ async function saveTask(card) {
         taskData.user_story = appState.currentStory.id;
     }
 
+    // Always send assigned_to, even if null (to allow unassignment)
     if (assignedTo) {
         taskData.assigned_to = parseInt(assignedTo);
+    } else {
+        taskData.assigned_to = null;
     }
 
     showLoading();
