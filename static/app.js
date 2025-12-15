@@ -787,6 +787,97 @@ document.getElementById('reloadTasksBtn').addEventListener('click', async () => 
     showToast('Tarefas atualizadas!', 'success');
 });
 
+// Bulk Creation Modal
+const bulkModal = document.getElementById('bulkModal');
+const bulkInput = document.getElementById('bulkTasksInput');
+const bulkCount = document.getElementById('bulkTaskCount');
+
+// Open bulk modal
+document.getElementById('bulkAddBtn').addEventListener('click', () => {
+    if (!appState.currentStory) {
+        showToast('Selecione uma User Story primeiro', 'warning');
+        return;
+    }
+    bulkModal.style.display = 'flex';
+    bulkInput.value = '';
+    bulkInput.focus();
+    updateBulkCount();
+});
+
+// Close bulk modal
+document.getElementById('closeBulkModal').addEventListener('click', () => {
+    bulkModal.style.display = 'none';
+});
+
+document.getElementById('cancelBulkBtn').addEventListener('click', () => {
+    bulkModal.style.display = 'none';
+});
+
+// Update task count
+bulkInput.addEventListener('input', updateBulkCount);
+
+function updateBulkCount() {
+    const lines = bulkInput.value.split('\n').filter(line => line.trim() !== '');
+    const count = lines.length;
+    bulkCount.textContent = `${count} tarefa${count !== 1 ? 's' : ''}`;
+}
+
+// Save bulk tasks
+document.getElementById('saveBulkBtn').addEventListener('click', async () => {
+    const lines = bulkInput.value.split('\n').filter(line => line.trim() !== '');
+
+    if (lines.length === 0) {
+        showToast('Digite pelo menos uma tarefa', 'warning');
+        return;
+    }
+
+    if (!appState.currentProject || !appState.currentStory) {
+        showToast('Selecione um projeto e user story', 'error');
+        return;
+    }
+
+    bulkModal.style.display = 'none';
+    showLoading();
+
+    try {
+        const tasks = lines.map(line => ({
+            subject: line.trim(),
+            description: '',
+            project: appState.currentProject.id,
+            user_story: appState.currentStory.id,
+            status: appState.taskStatuses[0]?.id
+        }));
+
+        showToast(`Criando ${tasks.length} tarefas...`, 'info');
+
+        const results = await taigaAPI.bulkCreateTasks(tasks);
+
+        const successful = results.filter(r => !r.error).length;
+        const failed = results.filter(r => r.error).length;
+
+        if (successful > 0) {
+            showToast(`✅ ${successful} tarefa(s) criada(s) com sucesso!`, 'success');
+            await loadTasks(appState.currentProject.id, appState.currentStory.id);
+        }
+
+        if (failed > 0) {
+            showToast(`⚠️ ${failed} tarefa(s) falharam`, 'warning');
+        }
+
+    } catch (error) {
+        showToast('Erro ao criar tarefas: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+});
+
+// Close modal on outside click
+bulkModal.addEventListener('click', (e) => {
+    if (e.target === bulkModal) {
+        bulkModal.style.display = 'none';
+    }
+});
+
 // Save Task
 async function saveTask(card) {
     const taskId = card.dataset.taskId;
