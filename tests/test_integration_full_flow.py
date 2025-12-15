@@ -158,7 +158,7 @@ class TestFullWorkflow:
         print(f"\n✅ Assigned both tasks to user ID {current_user_id}")
     
     def test_06_change_status_and_verify_description(self, authenticated_service, test_project_id):
-        """Step 6: CRITICAL TEST - Change status and verify description is NOT overwritten"""
+        """Step 6: CRITICAL TEST - Change status using partial PATCH and verify description is preserved"""
         assert hasattr(pytest, 'test_task1_id'), "Tasks must be created first"
         
         # Get task statuses for the project
@@ -177,9 +177,10 @@ class TestFullWorkflow:
         
         assert done_status is not None, "No status found for marking as done"
         
-        print(f"\n🔄 Changing status to '{done_status['name']}'...")
+        print(f"\n🔄 Changing status using PARTIAL PATCH (only status + version)...")
         
-        # Update both tasks to new status
+        # Update both tasks - send ONLY status and version (partial PATCH)
+        # This mimics what the frontend does: {"status": X, "version": Y}
         updated_task1 = authenticated_service.update_task(
             pytest.test_task1_id,
             status=done_status['id']
@@ -193,32 +194,34 @@ class TestFullWorkflow:
         assert updated_task1["status"] == done_status['id']
         assert updated_task2["status"] == done_status['id']
         
-        print(f"✅ Status changed to '{done_status['name']}'")
+        print(f"✅ Status changed to '{done_status['name']}' (sent only status + version)")
         
-        # ⚠️ CRITICAL TEST: Verify descriptions were NOT overwritten
-        print(f"\n🔍 CRITICAL TEST: Verifying descriptions were preserved...")
+        # ⚠️ CRITICAL TEST: Verify descriptions were preserved by Taiga's partial PATCH
+        print(f"\n🔍 CRITICAL TEST: Verifying Taiga preserved descriptions with partial PATCH...")
         
         # Fetch tasks again
         task1 = authenticated_service.get_task(pytest.test_task1_id)
         task2 = authenticated_service.get_task(pytest.test_task2_id)
         
-        # This is the critical assertion - if it fails, the bug fix failed!
+        # This is the critical assertion - Taiga should preserve description with partial PATCH
         if task1["description"] != pytest.test_task1_description:
-            print(f"❌ FAILURE: Task 1 description was overwritten!")
+            print(f"❌ FAILURE: Task 1 description was NOT preserved!")
             print(f"   Expected: '{pytest.test_task1_description}'")
             print(f"   Got: '{task1['description']}'")
-            assert False, "BUG FIX FAILED: Description was overwritten during status change!"
+            print(f"   This means Taiga's partial PATCH is NOT working as expected!")
+            assert False, "Taiga did not preserve description with partial PATCH (status only)!"
         
         if task2["description"] != pytest.test_task2_description:
-            print(f"❌ FAILURE: Task 2 description was overwritten!")
+            print(f"❌ FAILURE: Task 2 description was NOT preserved!")
             print(f"   Expected: '{pytest.test_task2_description}'")
             print(f"   Got: '{task2['description']}'")
-            assert False, "BUG FIX FAILED: Description was overwritten during status change!"
+            print(f"   This means Taiga's partial PATCH is NOT working as expected!")
+            assert False, "Taiga did not preserve description with partial PATCH (status only)!"
         
-        print(f"✅✅✅ SUCCESS: Descriptions were PRESERVED after status change!")
+        print(f"✅✅✅ SUCCESS: Taiga's partial PATCH preserved descriptions!")
         print(f"   Task 1: '{task1['description'][:50]}...'")
         print(f"   Task 2: '{task2['description'][:50]}...'")
-        print(f"\n🎉 BUG FIX VALIDATED: Our fix is working correctly!")
+        print(f"\n🎉 VALIDATED: Sending only 'status + version' preserves description!")
     
     def test_07_delete_tasks(self, authenticated_service):
         """Step 7: Delete both tasks"""

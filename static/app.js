@@ -1362,16 +1362,10 @@ document.getElementById('applyBulkAssignBtn')?.addEventListener('click', async (
         if (task.assigned_to === assignedToId) continue;
 
         try {
-            // Fetch full task details to preserve all fields (especially description)
-            const fullTask = await taigaAPI.getTask(task.id);
-
-            // Update with complete data to avoid overwriting description
+            // Taiga accepts partial PATCH - send only the field being changed + version
             await taigaAPI.updateTask(task.id, {
-                subject: fullTask.subject,
-                description: fullTask.description,
-                status: fullTask.status,
                 assigned_to: assignedToId,
-                version: fullTask.version // OCC
+                version: task.version // OCC
             });
             updatedCount++;
         } catch (e) {
@@ -1462,16 +1456,10 @@ document.getElementById('applyBulkStatusBtn')?.addEventListener('click', async (
         if (task.status === statusId) continue;
 
         try {
-            // Fetch full task details to preserve all fields (especially description)
-            const fullTask = await taigaAPI.getTask(task.id);
-
-            // Update with complete data to avoid overwriting description
+            // Taiga accepts partial PATCH - send only the field being changed + version
             await taigaAPI.updateTask(task.id, {
-                subject: fullTask.subject,
-                description: fullTask.description,
                 status: statusId,
-                assigned_to: fullTask.assigned_to,
-                version: fullTask.version // OCC
+                version: task.version // OCC
             });
             updatedCount++;
         } catch (e) {
