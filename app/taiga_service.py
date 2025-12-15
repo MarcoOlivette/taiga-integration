@@ -303,6 +303,7 @@ class TaigaService:
             "project": task_json.get("project"),
             "created_date": task_json.get("created_date"),
             "modified_date": task_json.get("modified_date"),
+            "version": task_json.get("version", 1),
         }
 
     # Metadata
@@ -411,7 +412,8 @@ class TaigaService:
             },
             "assigned_to_extra_info": {
                 "full_name_display": task.assigned_to_extra_info.get('full_name_display') if task.assigned_to_extra_info else None
-            }
+            },
+            "version": getattr(task, 'version', 1)
         }
 
 

@@ -233,8 +233,61 @@
                 <polyline points="17 21 17 13 7 13 7 21" />
                 <polyline points="7 3 7 8 15 8" />
               </svg>
-              Salvar Todas
+              Salvar Tudo
             </button>
+          </div>
+
+          <div
+            class="bulk-assign-section"
+            style="
+              margin-bottom: 1.5rem;
+              padding: 1rem;
+              background: var(--bg-card);
+              border: 1px solid var(--border-color);
+              border-radius: var(--radius-md);
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              flex-wrap: wrap;
+            "
+          >
+            <div style="font-weight: 600; min-width: 150px">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                style="width: 16px; height: 16px; margin-right: 8px"
+              >
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 010 7.75"></path>
+              </svg>
+              Atribuição em Massa
+            </div>
+            <div
+              style="
+                flex: 1;
+                min-width: 250px;
+                display: flex;
+                gap: 0.5rem;
+                align-items: center;
+              "
+            >
+              <div
+                id="bulkAssignMemberContainer"
+                style="flex: 1; position: relative"
+              >
+                <!-- Populated via JS -->
+              </div>
+              <button
+                class="btn btn-secondary"
+                id="applyBulkAssignBtn"
+                title="Atribuir este usuário a todas as tarefas listadas"
+              >
+                Vincular a Todos
+              </button>
+            </div>
           </div>
 
           <!-- Bulk Creation Modal -->
