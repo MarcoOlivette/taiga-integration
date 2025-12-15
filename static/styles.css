@@ -1147,20 +1147,150 @@ body {
   line-height: 1.5;
 }
 
-.view-task-details {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: var(--primary);
-  border: 1px solid var(--primary);
-  border-radius: var(--radius-sm);
-  color: white;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  font-weight: 500;
+/* --- Colorful Task Action Buttons --- */
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
-.view-task-details:hover {
-  background: var(--primary-dark);
+.task-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.8rem !important;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent !important;
+  box-shadow: none;
+}
+
+/* View Details - Info Blue */
+.task-actions .view-task-details {
+  background-color: rgba(59, 130, 246, 0.1) !important; /* blue-500 with opacity */
+  color: #3b82f6 !important; /* blue-500 */
+}
+.task-actions .view-task-details:hover {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3) !important;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+}
+
+/* Edit - Amber/Yellow */
+.task-actions .edit-task {
+  background-color: rgba(245, 158, 11, 0.1) !important; /* amber-500 with opacity */
+  color: #f59e0b !important; /* amber-500 */
+}
+.task-actions .edit-task:hover {
+  background-color: #f59e0b !important;
+  color: white !important;
+  box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+/* Delete - Red */
+.task-actions .delete-task {
+  background-color: rgba(239, 68, 68, 0.1) !important; /* red-500 with opacity */
+  color: #ef4444 !important; /* red-500 */
+}
+.task-actions .delete-task:hover {
+  background-color: #ef4444 !important;
+  color: white !important;
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+/* Icons in buttons */
+.task-actions button svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  stroke-width: 2.5;
+}
+
+/* --- Enhanced Bulk Assignment Panel --- */
+.bulk-assign-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem !important;
+  padding: 1.25rem !important;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-card) 100%) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bulk-assign-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--primary);
+  opacity: 0.8;
+}
+
+.bulk-assign-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--primary) !important;
+}
+
+.bulk-label {
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700 !important;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  min-width: 180px;
+}
+
+.bulk-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.1); 
+  color: var(--primary);
+}
+
+.bulk-controls {
+  flex: 1;
+  display: flex !important;
+  gap: 1rem;
+  align-items: center;
+  min-width: 300px;
+}
+
+#bulkAssignMemberContainer {
+  flex: 1;
+  position: relative;
+}
+
+#applyBulkAssignBtn {
+  height: 42px;
+  padding: 0 1.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  background: var(--primary);
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+}
+
+#applyBulkAssignBtn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 6px 8px -2px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }

@@ -713,9 +713,19 @@ function createTaskCard(task, isNew = false) {
             <div class="task-header">
                 ${task.ref ? `<div class="task-ref">#${task.ref}</div>` : '<div class="task-ref">Nova</div>'}
                 <div class="task-actions">
-                    ${!isNew ? '<button class="view-task-details">Ver Detalhes</button>' : ''}
-                    <button class="edit-task">Editar</button>
-                    <button class="delete delete-task">Excluir</button>
+                    ${!isNew ? `
+                    <button class="view-task-details" title="Ver Detalhes">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Detalhes
+                    </button>` : ''}
+                    <button class="edit-task" title="Editar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Editar
+                    </button>
+                    <button class="delete delete-task" title="Excluir">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Excluir
+                    </button>
                 </div>
             </div>
             <div class="task-view">
@@ -734,23 +744,41 @@ function createTaskCard(task, isNew = false) {
 }
 
 // Sort members: current user first, then alphabetically
+function normalizeString(str) {
+    if (!str) return '';
+    return str.toString()
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/[^a-z0-9]/g, ""); // Remove non-alphanumeric (spaces, dots, etc)
+}
+
 // Helper to identify current user in member list
 function isCurrentUser(member) {
     if (!appState.currentUser) return false;
 
+    // 1. Exact ID Match (most reliable)
     const memberId = member.user || member.id;
-    // Check ID first
-    if (memberId === appState.currentUser.id) return true;
+    if (memberId && appState.currentUser.id && memberId === appState.currentUser.id) return true;
 
-    // Check full name exact match (case insensitive)
-    const memberName = (member.full_name || member.full_name_display || '').trim().toLowerCase();
-    const currentName = (appState.currentUser.full_name || '').trim().toLowerCase();
+    // 2. Fuzzy Name/Username Match
+    // Collect all possible identifiers for the member
+    const memberIdentifiers = [
+        member.full_name,
+        member.full_name_display,
+        member.username,
+        member.slug
+    ].map(normalizeString).filter(s => s && s.length > 2); // Filter short noise
 
-    // Check username if available
-    const memberUsername = (member.username || '').trim().toLowerCase();
-    const currentUsername = (appState.currentUser.username || '').trim().toLowerCase();
+    // Collect all possible identifiers for the current user
+    const userIdentifiers = [
+        appState.currentUser.full_name,
+        appState.currentUser.username,
+        appState.currentUser.slug
+    ].map(normalizeString).filter(s => s && s.length > 2);
 
-    return (memberName && memberName === currentName) || (memberUsername && memberUsername === currentUsername);
+    // Check if any identifier matches any other identifier
+    // This handles "Marco Olivette" matches "marcoolivette"
+    return memberIdentifiers.some(m => userIdentifiers.includes(m));
 }
 
 function getSortedMembers() {
