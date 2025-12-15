@@ -1,0 +1,269 @@
+"""
+Taiga API Client Service using python-taiga library
+"""
+from taiga import TaigaAPI
+from typing import Optional, Dict, List, Any
+from pydantic import BaseModel
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class TaigaCredentials(BaseModel):
+    username: str
+    password: str
+    taiga_url: Optional[str] = None
+
+
+class TaigaService:
+    """Service wrapper for python-taiga library"""
+    
+    def __init__(self):
+        self.base_url = os.getenv("TAIGA_API_URL", "https://pista.decea.mil.br/api/v1")
+        # Remove /api/v1 from base_url for python-taiga
+        self.host = self.base_url.replace('/api/v1', '')
+        self.api: Optional[TaigaAPI] = None
+        self.current_user: Optional[Dict] = None
+
+    def set_host(self, url: str):
+        """Set custom Taiga instance URL"""
+        url = url.rstrip('/')
+        if url.endswith('/api/v1'):
+            url = url[:-7]  # Remove /api/v1
+        self.host = url
+
+    def login(self, username: str, password: str, taiga_url: Optional[str] = None) -> Dict:
+        """Authenticate with Taiga"""
+        if taiga_url:
+            self.set_host(taiga_url)
+
+        try:
+            # Create TaigaAPI instance with custom host
+            self.api = TaigaAPI(host=self.host)
+            
+            # Authenticate
+            self.api.auth(username=username, password=password)
+            
+            # Get current user info
+            self.current_user = self.api.me()
+            
+            return {
+                "auth_token": self.api.token,
+                "user": {
+                    "id": self.current_user.id,
+                    "username": self.current_user.username,
+                    "full_name": self.current_user.full_name,
+                    "email": self.current_user.email,
+                }
+            }
+        except Exception as e:
+            raise Exception(f"Authentication failed: {str(e)}")
+
+    def _ensure_authenticated(self):
+        """Ensure user is authenticated"""
+        if not self.api or not self.api.token:
+            raise Exception("Not authenticated. Please login first.")
+
+    # Projects
+    def get_projects(self) -> List[Dict]:
+        """Get all projects"""
+        self._ensure_authenticated()
+        projects = self.api.projects.list()
+        return [self._project_to_dict(p) for p in projects]
+
+    def get_project(self, project_id: int) -> Dict:
+        """Get project by ID"""
+        self._ensure_authenticated()
+        project = self.api.projects.get(project_id)
+        return self._project_to_dict(project)
+
+    def get_project_by_slug(self, slug: str) -> Dict:
+        """Get project by slug"""
+        self._ensure_authenticated()
+        project = self.api.projects.get_by_slug(slug)
+        return self._project_to_dict(project)
+
+    # User Stories
+    def get_user_stories(self, project_id: int) -> List[Dict]:
+        """Get user stories for a project"""
+        self._ensure_authenticated()
+        stories = self.api.user_stories.list(project=project_id)
+        return [self._userstory_to_dict(s) for s in stories]
+
+    def get_user_story(self, story_id: int) -> Dict:
+        """Get user story by ID"""
+        self._ensure_authenticated()
+        story = self.api.user_stories.get(story_id)
+        return self._userstory_to_dict(story)
+
+    # Epics
+    def get_epics(self, project_id: int) -> List[Dict]:
+        """Get epics for a project"""
+        self._ensure_authenticated()
+        epics = self.api.epics.list(project=project_id)
+        return [self._epic_to_dict(e) for e in epics]
+
+    def get_epic(self, epic_id: int) -> Dict:
+        """Get epic by ID"""
+        self._ensure_authenticated()
+        epic = self.api.epics.get(epic_id)
+        return self._epic_to_dict(epic)
+
+    # Tasks
+    def get_tasks(self, project_id: int, user_story_id: Optional[int] = None) -> List[Dict]:
+        """Get tasks for a project or user story"""
+        self._ensure_authenticated()
+        filters = {"project": project_id}
+        if user_story_id:
+            filters["user_story"] = user_story_id
+        tasks = self.api.tasks.list(**filters)
+        return [self._task_to_dict(t) for t in tasks]
+
+    def get_task(self, task_id: int) -> Dict:
+        """Get task by ID"""
+        self._ensure_authenticated()
+        task = self.api.tasks.get(task_id)
+        return self._task_to_dict(task)
+
+    def create_task(self, project_id: int, subject: str, **kwargs) -> Dict:
+        """Create a new task"""
+        self._ensure_authenticated()
+        
+        # Get project to use its add_task method
+        project = self.api.projects.get(project_id)
+        
+        # Get required status if not provided
+        status = kwargs.get('status')
+        if not status:
+            # Get first available task status
+            if project.task_statuses:
+                status = project.task_statuses[0].id
+        
+        # Create task
+        task = project.add_task(
+            subject=subject,
+            status=status,
+            description=kwargs.get('description', ''),
+            assigned_to=kwargs.get('assigned_to'),
+            user_story=kwargs.get('user_story')
+        )
+        
+        return self._task_to_dict(task)
+
+    def update_task(self, task_id: int, **kwargs) -> Dict:
+        """Update a task"""
+        self._ensure_authenticated()
+        task = self.api.tasks.get(task_id)
+        
+        # Update attributes
+        for key, value in kwargs.items():
+            if value is not None and hasattr(task, key):
+                setattr(task, key, value)
+        
+        task.update()
+        return self._task_to_dict(task)
+
+    def delete_task(self, task_id: int) -> None:
+        """Delete a task"""
+        self._ensure_authenticated()
+        task = self.api.tasks.get(task_id)
+        task.delete()
+
+    def bulk_create_tasks(self, project_id: int, tasks_data: List[Dict]) -> List[Dict]:
+        """Create multiple tasks"""
+        self._ensure_authenticated()
+        created_tasks = []
+        
+        for task_data in tasks_data:
+            try:
+                task = self.create_task(project_id, **task_data)
+                created_tasks.append(task)
+            except Exception as e:
+                created_tasks.append({"error": str(e), "data": task_data})
+        
+        return created_tasks
+
+    # Metadata
+    def get_task_statuses(self, project_id: int) -> List[Dict]:
+        """Get task statuses for a project"""
+        self._ensure_authenticated()
+        project = self.api.projects.get(project_id)
+        return [{"id": s.id, "name": s.name, "color": s.color} for s in project.task_statuses]
+
+    def get_project_members(self, project_id: int) -> List[Dict]:
+        """Get project members"""
+        self._ensure_authenticated()
+        project = self.api.projects.get(project_id)
+        return [
+            {
+                "id": m.id,
+                "user": m.user,
+                "full_name_display": m.full_name_display,
+                "role_name": m.role_name
+            }
+            for m in project.members
+        ]
+
+    # Helper methods to convert objects to dicts
+    def _project_to_dict(self, project) -> Dict:
+        """Convert project object to dict"""
+        return {
+            "id": project.id,
+            "name": project.name,
+            "slug": project.slug,
+            "description": project.description,
+            "total_story_points": getattr(project, 'total_story_points', 0),
+            "members": [{"id": m.id, "full_name_display": m.full_name_display} for m in project.members] if hasattr(project, 'members') else []
+        }
+
+    def _userstory_to_dict(self, story) -> Dict:
+        """Convert user story object to dict"""
+        return {
+            "id": story.id,
+            "ref": story.ref,
+            "subject": story.subject,
+            "description": story.description,
+            "status": story.status,
+            "status_extra_info": {
+                "name": story.status_extra_info.get('name') if story.status_extra_info else None,
+                "color": story.status_extra_info.get('color') if story.status_extra_info else None
+            }
+        }
+
+    def _epic_to_dict(self, epic) -> Dict:
+        """Convert epic object to dict"""
+        return {
+            "id": epic.id,
+            "ref": epic.ref,
+            "subject": epic.subject,
+            "description": epic.description,
+            "status": epic.status,
+            "status_extra_info": {
+                "name": epic.status_extra_info.get('name') if epic.status_extra_info else None,
+                "color": epic.status_extra_info.get('color') if epic.status_extra_info else None
+            }
+        }
+
+    def _task_to_dict(self, task) -> Dict:
+        """Convert task object to dict"""
+        return {
+            "id": task.id,
+            "ref": task.ref,
+            "subject": task.subject,
+            "description": task.description,
+            "status": task.status,
+            "assigned_to": task.assigned_to,
+            "user_story": task.user_story,
+            "status_extra_info": {
+                "name": task.status_extra_info.get('name') if task.status_extra_info else None,
+                "color": task.status_extra_info.get('color') if task.status_extra_info else None
+            },
+            "assigned_to_extra_info": {
+                "full_name_display": task.assigned_to_extra_info.get('full_name_display') if task.assigned_to_extra_info else None
+            }
+        }
+
+
+# Global service instance
+taiga_service = TaigaService()
