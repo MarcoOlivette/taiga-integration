@@ -183,23 +183,33 @@ class TaigaService:
     def get_tasks(self, project_id: int, user_story_id: Optional[int] = None) -> List[Dict]:
         """Get tasks for a project or user story"""
         self._ensure_authenticated()
-        filters = {"project": project_id}
-        if user_story_id:
-            filters["user_story"] = user_story_id
         
-        # Ensure we get all tasks too
-        tasks = []
+        import requests
+        
+        # Build URL with parameters - use self.host + /api/v1
+        api_url = f"{self.host}/api/v1"
+        url = f"{api_url}/tasks"
+        params = {
+            "project": project_id,
+        }
+        
+        if user_story_id:
+            params["user_story"] = user_story_id
+        
+        headers = {
+            "Authorization": f"Bearer {self.api.token}",
+            "Content-Type": "application/json",
+            "x-disable-pagination": "1"  # Fetch all tasks without pagination limit
+        }
+        
         try:
-            # First try standard list, if it returns limited set we might need pagination loop too
-            # But tasks are usually fewer per US. If per project, might be many.
-            # python-taiga .list() normally iterates. Let's trust it for tasks for now unless reported issue.
-            tasks = self.api.tasks.list(**filters)
+            response = requests.get(url, params=params, headers=headers)
+            response.raise_for_status()
+            tasks_data = response.json()
+            return tasks_data
         except Exception as e:
-            # If list fails, try manual pagination or just return empty
             print(f"Error fetching tasks: {e}")
             return []
-            
-        return [self._task_to_dict(t) for t in tasks]
 
     def get_task(self, task_id: int) -> Dict:
         """Get task by ID"""

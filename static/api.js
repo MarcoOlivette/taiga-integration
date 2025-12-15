@@ -205,7 +205,12 @@ class TaigaAPI {
             if (userStoryId) {
                 endpoint += `&user_story=${userStoryId}`;
             }
-            const tasks = await this.request(endpoint);
+            // Add x-disable-pagination header to fetch all tasks (not capped at 30)
+            const tasks = await this.request(endpoint, {
+                headers: {
+                    'x-disable-pagination': '1'
+                }
+            });
             return tasks;
         } catch (error) {
             console.error('Get tasks error:', error);
