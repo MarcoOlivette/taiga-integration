@@ -1,3 +1,6 @@
+// Import state management
+import { state } from './state.js';
+
 // Core utility functions
 
 // Normalize string for comparison (remove accents, lowercase, alphanumeric only)
@@ -11,13 +14,11 @@ export function normalizeString(str) {
 
 // Helper to identify current user in member list
 export function isCurrentUser(member) {
-    // Get appState from global scope (will be replaced by state module later)
-    const appState = window.appState || {};
-    if (!appState.currentUser) return false;
+    if (!state.currentUser) return false;
 
     // 1. Exact ID Match (most reliable)
     const memberId = member.user || member.id;
-    if (memberId && appState.currentUser.id && memberId === appState.currentUser.id) return true;
+    if (memberId && state.currentUser.id && memberId === state.currentUser.id) return true;
 
     // 2. Fuzzy Name/Username Match
     // Collect all possible identifiers for the member
@@ -30,9 +31,9 @@ export function isCurrentUser(member) {
 
     // Collect all possible identifiers for the current user
     const userIdentifiers = [
-        appState.currentUser.full_name,
-        appState.currentUser.username,
-        appState.currentUser.slug
+        state.currentUser.full_name,
+        state.currentUser.username,
+        state.currentUser.slug
     ].map(normalizeString).filter(s => s && s.length > 2);
 
     // Check if any identifier matches any other identifier
@@ -42,11 +43,9 @@ export function isCurrentUser(member) {
 
 // Sort members: current user first, then alphabetically
 export function getSortedMembers() {
-    // Get appState from global scope (will be replaced by state module later)
-    const appState = window.appState || {};
-    if (!appState.projectMembers) return [];
+    if (!state.projectMembers) return [];
 
-    const members = [...appState.projectMembers];
+    const members = [...state.projectMembers];
 
     return members.sort((a, b) => {
         // Current user always first

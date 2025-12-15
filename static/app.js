@@ -2,24 +2,8 @@
 import { escapeHtml, normalizeString, isCurrentUser, getSortedMembers } from './js/core/utils.js';
 // Import API client
 import { taigaAPI } from './js/core/api.js';
-
-// Application State
-const appState = {
-    currentScreen: 'login',
-    currentProject: null,
-    currentStory: null,
-    currentEpic: null,
-    projects: [],
-    userStories: [],
-    epics: [],
-    tasks: [],
-    taskStatuses: [],
-    projectMembers: [],
-    newTasks: []
-};
-
-// Expose appState globally for utils (temporary, will be replaced by state module)
-window.appState = appState;
+// Import state management
+import { state, setState, getState, resetState } from './js/core/state.js';
 
 // UI Helper Functions
 function showScreen(screenId) {
@@ -27,7 +11,7 @@ function showScreen(screenId) {
         screen.classList.remove('active');
     });
     document.getElementById(screenId).classList.add('active');
-    appState.currentScreen = screenId;
+    state.currentScreen = screenId;
 }
 
 function showLoading(show = true) {
@@ -119,8 +103,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 async function loadProjects() {
     showLoading();
     try {
-        appState.projects = await taigaAPI.getProjects();
-        renderProjects(appState.projects);
+        state.projects = await taigaAPI.getProjects();
+        renderProjects(state.projects);
     } catch (error) {
         showToast('Erro ao carregar projetos: ' + error.message, 'error');
     } finally {
@@ -249,7 +233,7 @@ function renderProjects(projects) {
             card.classList.toggle('favorite', isFavorite);
 
             // Re-render to re-sort
-            renderProjects(appState.projects);
+            renderProjects(state.projects);
 
             showToast(
                 isFavorite ? 'Projeto adicionado aos favoritos' : 'Projeto removido dos favoritos',
@@ -262,7 +246,7 @@ function renderProjects(projects) {
 // Project Search
 document.getElementById('projectSearch').addEventListener('input', (e) => {
     const searchTerm = e.target.value.toLowerCase();
-    const filtered = appState.projects.filter(project =>
+    const filtered = state.projects.filter(project =>
         project.name.toLowerCase().includes(searchTerm) ||
         (project.description && project.description.toLowerCase().includes(searchTerm))
     );
@@ -273,17 +257,17 @@ document.getElementById('projectSearch').addEventListener('input', (e) => {
 async function selectProject(projectId) {
     showLoading();
     try {
-        appState.currentProject = await taigaAPI.getProject(projectId);
+        state.currentProject = await taigaAPI.getProject(projectId);
 
         // Update header
-        document.getElementById('projectTitle').textContent = appState.currentProject.name;
+        document.getElementById('projectTitle').textContent = state.currentProject.name;
         document.getElementById('projectDescription').textContent = 'Selecione uma User Story ou Épico';
 
         // Helper to format members
-        if (appState.currentProject.members && appState.currentProject.members.length > 0) {
-            console.log('Caching members from project data', appState.currentProject.members.length);
-            localStorage.setItem('projectMembers', JSON.stringify(appState.currentProject.members));
-            appState.projectMembers = appState.currentProject.members;
+        if (state.currentProject.members && state.currentProject.members.length > 0) {
+            console.log('Caching members from project data', state.currentProject.members.length);
+            localStorage.setItem('projectMembers', JSON.stringify(state.currentProject.members));
+            state.projectMembers = state.currentProject.members;
         }
 
         // Load user stories and epics
@@ -303,7 +287,7 @@ async function selectProject(projectId) {
 // Back to Projects
 document.getElementById('backToProjects').addEventListener('click', () => {
     showScreen('projectsScreen');
-    appState.currentProject = null;
+    state.currentProject = null;
 });
 
 // Load User Stories
@@ -332,8 +316,8 @@ async function loadUserStories(projectId) {
             allStories.unshift(favoriteStory);
         }
 
-        appState.userStories = allStories;
-        renderUserStories(appState.userStories);
+        state.userStories = allStories;
+        renderUserStories(state.userStories);
     } catch (error) {
         showToast('Erro ao carregar user stories: ' + error.message, 'error');
     }
@@ -431,14 +415,14 @@ function toggleFavoriteUserStory(storyId) {
     }
 
     // Re-render to update UI
-    renderUserStories(appState.userStories);
+    renderUserStories(state.userStories);
 }
 
 // Load Epics
 async function loadEpics(projectId) {
     try {
-        appState.epics = await taigaAPI.getEpics(projectId);
-        renderEpics(appState.epics);
+        state.epics = await taigaAPI.getEpics(projectId);
+        renderEpics(state.epics);
     } catch (error) {
         showToast('Erro ao carregar épicos: ' + error.message, 'error');
     }
@@ -509,8 +493,8 @@ document.getElementById('usSearch').addEventListener('input', (e) => {
 
     // If empty, show all loaded stories
     if (!searchTerm) {
-        renderUserStories(appState.userStories);
-        renderEpics(appState.epics);
+        renderUserStories(state.userStories);
+        renderEpics(state.epics);
         return;
     }
 
@@ -522,13 +506,13 @@ document.getElementById('usSearch').addEventListener('input', (e) => {
 
 // Search user stories using paginated API
 async function searchUserStoriesAPI(query) {
-    if (!appState.currentProject) return;
+    if (!state.currentProject) return;
 
     try {
         showLoading();
 
         // Use the Taiga API directly with pagination parameters
-        const url = `${config.getApiUrl()}/userstories?project=${appState.currentProject.id}&q=${encodeURIComponent(query)}&milestone=null&page_size=100`;
+        const url = `${config.getApiUrl()}/userstories?project=${state.currentProject.id}&q=${encodeURIComponent(query)}&milestone=null&page_size=100`;
 
         const response = await fetch(url, {
             headers: {
@@ -560,7 +544,7 @@ async function searchUserStoriesAPI(query) {
         showToast('Erro ao buscar: ' + error.message, 'error');
 
         // Fallback to local search
-        const filteredStories = appState.userStories.filter(story =>
+        const filteredStories = state.userStories.filter(story =>
             story.subject.toLowerCase().includes(query.toLowerCase()) ||
             (story.description && story.description.toLowerCase().includes(query.toLowerCase()))
         );
@@ -574,18 +558,18 @@ async function searchUserStoriesAPI(query) {
 async function selectUserStory(storyId) {
     showLoading();
     try {
-        appState.currentStory = await taigaAPI.getUserStory(storyId);
-        appState.currentEpic = null;
+        state.currentStory = await taigaAPI.getUserStory(storyId);
+        state.currentEpic = null;
 
         // Update header
-        document.getElementById('storyTitle').textContent = `US #${appState.currentStory.ref}: ${appState.currentStory.subject}`;
+        document.getElementById('storyTitle').textContent = `US #${state.currentStory.ref}: ${state.currentStory.subject}`;
         document.getElementById('storyDescription').textContent = 'Gerencie tarefas desta user story';
 
         // Load tasks and metadata
         await Promise.all([
-            loadTasks(appState.currentProject.id, storyId),
-            loadTaskStatuses(appState.currentProject.id),
-            loadProjectMembers(appState.currentProject.id)
+            loadTasks(state.currentProject.id, storyId),
+            loadTaskStatuses(state.currentProject.id),
+            loadProjectMembers(state.currentProject.id)
         ]);
 
         showScreen('tasksScreen');
@@ -606,18 +590,18 @@ async function selectUserStory(storyId) {
 async function selectEpic(epicId) {
     showLoading();
     try {
-        appState.currentEpic = await taigaAPI.getEpic(epicId);
-        appState.currentStory = null;
+        state.currentEpic = await taigaAPI.getEpic(epicId);
+        state.currentStory = null;
 
         // Update header
-        document.getElementById('storyTitle').textContent = `Épico #${appState.currentEpic.ref}: ${appState.currentEpic.subject}`;
+        document.getElementById('storyTitle').textContent = `Épico #${state.currentEpic.ref}: ${state.currentEpic.subject}`;
         document.getElementById('storyDescription').textContent = 'Gerencie tarefas deste épico';
 
         // Load tasks and metadata
         await Promise.all([
-            loadTasks(appState.currentProject.id),
-            loadTaskStatuses(appState.currentProject.id),
-            loadProjectMembers(appState.currentProject.id)
+            loadTasks(state.currentProject.id),
+            loadTaskStatuses(state.currentProject.id),
+            loadProjectMembers(state.currentProject.id)
         ]);
 
         showScreen('tasksScreen');
@@ -631,16 +615,16 @@ async function selectEpic(epicId) {
 // Back to Stories
 document.getElementById('backToStories').addEventListener('click', () => {
     showScreen('userStoriesScreen');
-    appState.currentStory = null;
-    appState.currentEpic = null;
-    appState.newTasks = [];
+    state.currentStory = null;
+    state.currentEpic = null;
+    state.newTasks = [];
 });
 
 // Load Tasks
 async function loadTasks(projectId, userStoryId = null) {
     try {
-        appState.tasks = await taigaAPI.getTasks(projectId, userStoryId);
-        renderTasks(appState.tasks);
+        state.tasks = await taigaAPI.getTasks(projectId, userStoryId);
+        renderTasks(state.tasks);
     } catch (error) {
         showToast('Erro ao carregar tarefas: ' + error.message, 'error');
     }
@@ -648,7 +632,7 @@ async function loadTasks(projectId, userStoryId = null) {
 
 async function loadTaskStatuses(projectId) {
     try {
-        appState.taskStatuses = await taigaAPI.getTaskStatuses(projectId);
+        state.taskStatuses = await taigaAPI.getTaskStatuses(projectId);
     } catch (error) {
         console.error('Error loading task statuses:', error);
     }
@@ -656,7 +640,7 @@ async function loadTaskStatuses(projectId) {
 
 async function loadProjectMembers(projectId) {
     // If already loaded in state, skip
-    if (appState.projectMembers && appState.projectMembers.length > 0) {
+    if (state.projectMembers && state.projectMembers.length > 0) {
         return;
     }
 
@@ -674,7 +658,7 @@ async function loadProjectMembers(projectId) {
                         console.warn('Cached members do not match current project ID');
                     } else {
                         console.log('Using cached members from localStorage');
-                        appState.projectMembers = members;
+                        state.projectMembers = members;
                         return;
                     }
                 }
@@ -684,11 +668,11 @@ async function loadProjectMembers(projectId) {
         }
 
         console.log('Fetching members from API');
-        const slug = appState.currentProject?.slug;
-        appState.projectMembers = await taigaAPI.getProjectMembers(projectId, slug);
+        const slug = state.currentProject?.slug;
+        state.projectMembers = await taigaAPI.getProjectMembers(projectId, slug);
 
         // Save to cache
-        localStorage.setItem('projectMembers', JSON.stringify(appState.projectMembers));
+        localStorage.setItem('projectMembers', JSON.stringify(state.projectMembers));
 
     } catch (error) {
         console.error('Error loading project members:', error);
@@ -770,7 +754,7 @@ function createTaskForm(task = {}) {
         <textarea class="task-description" placeholder="Descrição (opcional)">${escapeHtml(task.description || '')}</textarea>
         <select class="task-status">
             <option value="">Selecione um status</option>
-            ${appState.taskStatuses.map(status => `
+            ${state.taskStatuses.map(status => `
                 <option value="${status.id}" ${task.status === status.id ? 'selected' : ''}>${escapeHtml(status.name)}</option>
             `).join('')}
         </select>
@@ -976,13 +960,13 @@ document.getElementById('addTaskBtn').addEventListener('click', () => {
 
 // Reload Tasks Button
 document.getElementById('reloadTasksBtn').addEventListener('click', async () => {
-    if (!appState.currentStory) {
+    if (!state.currentStory) {
         showToast('Nenhuma User Story selecionada', 'warning');
         return;
     }
 
     showToast('Atualizando tarefas...', 'info');
-    await loadTasks(appState.currentProject.id, appState.currentStory.id);
+    await loadTasks(state.currentProject.id, state.currentStory.id);
     showToast('Tarefas atualizadas!', 'success');
 });
 
@@ -993,7 +977,7 @@ const bulkCount = document.getElementById('bulkTaskCount');
 
 // Open bulk modal
 document.getElementById('bulkAddBtn').addEventListener('click', () => {
-    if (!appState.currentStory) {
+    if (!state.currentStory) {
         showToast('Selecione uma User Story primeiro', 'warning');
         return;
     }
@@ -1030,7 +1014,7 @@ document.getElementById('saveBulkBtn').addEventListener('click', async () => {
         return;
     }
 
-    if (!appState.currentProject || !appState.currentStory) {
+    if (!state.currentProject || !state.currentStory) {
         showToast('Selecione um projeto e user story', 'error');
         return;
     }
@@ -1042,9 +1026,9 @@ document.getElementById('saveBulkBtn').addEventListener('click', async () => {
         const tasks = lines.map(line => ({
             subject: line.trim(),
             description: '',
-            project: appState.currentProject.id,
-            user_story: appState.currentStory.id,
-            status: appState.taskStatuses[0]?.id
+            project: state.currentProject.id,
+            user_story: state.currentStory.id,
+            status: state.taskStatuses[0]?.id
         }));
 
         showToast(`Criando ${tasks.length} tarefas...`, 'info');
@@ -1056,7 +1040,7 @@ document.getElementById('saveBulkBtn').addEventListener('click', async () => {
 
         if (successful > 0) {
             showToast(`✅ ${successful} tarefa(s) criada(s) com sucesso!`, 'success');
-            await loadTasks(appState.currentProject.id, appState.currentStory.id);
+            await loadTasks(state.currentProject.id, state.currentStory.id);
         }
 
         if (failed > 0) {
@@ -1099,12 +1083,12 @@ async function saveTask(card) {
             const taskData = {
                 subject,
                 description,
-                project: appState.currentProject.id,
-                status: status || appState.taskStatuses[0]?.id,
+                project: state.currentProject.id,
+                status: status || state.taskStatuses[0]?.id,
             };
 
-            if (appState.currentStory) {
-                taskData.user_story = appState.currentStory.id;
+            if (state.currentStory) {
+                taskData.user_story = state.currentStory.id;
             }
 
             // Always send assigned_to, even if null (to allow unassignment)
@@ -1119,7 +1103,7 @@ async function saveTask(card) {
 
             // Remove from new tasks and add to existing
             card.remove();
-            await loadTasks(appState.currentProject.id, appState.currentStory?.id);
+            await loadTasks(state.currentProject.id, state.currentStory?.id);
         } else {
             // For existing tasks, compare with original values and send ONLY changed fields
             const taskData = {};
@@ -1163,7 +1147,7 @@ async function saveTask(card) {
 
             await taigaAPI.updateTask(parseInt(taskId), taskData);
             showToast('Tarefa atualizada com sucesso!', 'success');
-            await loadTasks(appState.currentProject.id, appState.currentStory?.id);
+            await loadTasks(state.currentProject.id, state.currentStory?.id);
         }
 
         // Hide save all button if no more new tasks
@@ -1194,7 +1178,7 @@ async function deleteTask(card) {
     try {
         await taigaAPI.deleteTask(parseInt(taskId));
         showToast('Tarefa excluída com sucesso!', 'success');
-        await loadTasks(appState.currentProject.id, appState.currentStory?.id);
+        await loadTasks(state.currentProject.id, state.currentStory?.id);
     } catch (error) {
         showToast('Erro ao excluir tarefa: ' + error.message, 'error');
     } finally {
@@ -1228,12 +1212,12 @@ document.getElementById('saveAllTasksBtn').addEventListener('click', async () =>
         const taskData = {
             subject,
             description,
-            project: appState.currentProject.id,
-            status: status || appState.taskStatuses[0]?.id,
+            project: state.currentProject.id,
+            status: status || state.taskStatuses[0]?.id,
         };
 
-        if (appState.currentStory) {
-            taskData.user_story = appState.currentStory.id;
+        if (state.currentStory) {
+            taskData.user_story = state.currentStory.id;
         }
 
         if (assignedTo) {
@@ -1258,7 +1242,7 @@ document.getElementById('saveAllTasksBtn').addEventListener('click', async () =>
         document.getElementById('saveAllTasksBtn').style.display = 'none';
 
         // Reload tasks
-        await loadTasks(appState.currentProject.id, appState.currentStory?.id);
+        await loadTasks(state.currentProject.id, state.currentStory?.id);
     } catch (error) {
         showToast('Erro ao criar tarefas: ' + error.message, 'error');
     } finally {
@@ -1328,7 +1312,7 @@ document.getElementById('applyBulkAssignBtn')?.addEventListener('click', async (
     if (!select) return;
 
     // Check if there are tasks
-    const tasks = appState.tasks || [];
+    const tasks = state.tasks || [];
     const newTasks = document.querySelectorAll('.task-card.new');
 
     if (tasks.length === 0 && newTasks.length === 0) {
@@ -1386,8 +1370,8 @@ document.getElementById('applyBulkAssignBtn')?.addEventListener('click', async (
     }
 
     // Refresh list
-    if (updatedCount > 0 && appState.currentStory) {
-        await loadTasks(appState.currentProject.id, appState.currentStory.id);
+    if (updatedCount > 0 && state.currentStory) {
+        await loadTasks(state.currentProject.id, state.currentStory.id);
     }
 });
 
@@ -1396,12 +1380,12 @@ function renderBulkStatusSelect() {
     const container = document.getElementById('bulkStatusContainer');
     if (!container) return;
 
-    if (!appState.taskStatuses || appState.taskStatuses.length === 0) {
+    if (!state.taskStatuses || state.taskStatuses.length === 0) {
         container.innerHTML = '<span style="color: var(--text-secondary);">Nenhum status disponível</span>';
         return;
     }
 
-    const options = appState.taskStatuses.map(status => `
+    const options = state.taskStatuses.map(status => `
         <option value="${status.id}">${escapeHtml(status.name)}</option>
     `).join('');
 
@@ -1422,7 +1406,7 @@ document.getElementById('applyBulkStatusBtn')?.addEventListener('click', async (
     }
 
     // Check if there are tasks
-    const tasks = appState.tasks || [];
+    const tasks = state.tasks || [];
     const newTasks = document.querySelectorAll('.task-card.new');
 
     if (tasks.length === 0 && newTasks.length === 0) {
@@ -1480,8 +1464,8 @@ document.getElementById('applyBulkStatusBtn')?.addEventListener('click', async (
     }
 
     // Refresh list
-    if (updatedCount > 0 && appState.currentStory) {
-        await loadTasks(appState.currentProject.id, appState.currentStory.id);
+    if (updatedCount > 0 && state.currentStory) {
+        await loadTasks(state.currentProject.id, state.currentStory.id);
     }
 });
 

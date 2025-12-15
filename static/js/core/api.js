@@ -1,5 +1,7 @@
 // Import configuration
 import config from '../config.js';
+// Import state management
+import { state } from './state.js';
 
 // Taiga API Client
 class TaigaAPI {
@@ -56,6 +58,7 @@ class TaigaAPI {
         this.authToken = null;
         this.refreshToken = null;
         this.currentUser = null;
+        state.currentUser = null;
         localStorage.removeItem('taiga_auth_token');
         localStorage.removeItem('taiga_refresh_token');
         localStorage.removeItem('taiga_current_user');
@@ -65,6 +68,7 @@ class TaigaAPI {
         try {
             const response = await this.request('/users/me');
             this.currentUser = response;
+            state.currentUser = response;
             localStorage.setItem('taiga_current_user', JSON.stringify(response));
             return response;
         } catch (error) {
