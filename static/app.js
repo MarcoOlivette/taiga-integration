@@ -712,7 +712,13 @@ function renderTasks(tasks) {
 
 function createTaskCard(task, isNew = false) {
     return `
-        <div class="task-card ${isNew ? 'new' : ''}" data-task-id="${task.id || 'new-' + Date.now()}" data-task-version="${task.version || 1}">
+        <div class="task-card ${isNew ? 'new' : ''}" 
+             data-task-id="${task.id || 'new-' + Date.now()}" 
+             data-task-version="${task.version || 1}"
+             data-original-subject="${escapeHtml(task.subject || '')}"
+             data-original-description="${escapeHtml(task.description || '')}"
+             data-original-status="${task.status || ''}"
+             data-original-assigned="${task.assigned_to || ''}">
             <div class="task-header">
                 ${task.ref ? `<div class="task-ref">#${task.ref}</div>` : '<div class="task-ref">Nova</div>'}
                 <div class="task-actions">
@@ -1163,32 +1169,44 @@ async function saveTask(card) {
             card.remove();
             await loadTasks(appState.currentProject.id, appState.currentStory?.id);
         } else {
-            // For existing tasks, use partial PATCH - only send changed fields
+            // For existing tasks, compare with original values and send ONLY changed fields
             const taskData = {};
 
             // Always include version for OCC
             const version = parseInt(card.dataset.taskVersion) || 1;
             taskData.version = version;
 
-            // Only include fields that are present in the form and not empty
-            if (subject) {
+            // Get original values from data attributes
+            const originalSubject = card.dataset.originalSubject || '';
+            const originalDescription = card.dataset.originalDescription || '';
+            const originalStatus = card.dataset.originalStatus || '';
+            const originalAssigned = card.dataset.originalAssigned || '';
+
+            // Compare and add only changed fields
+            if (subject !== originalSubject) {
                 taskData.subject = subject;
             }
 
-            // Only include description if it's not empty (user actually filled it)
-            if (description) {
+            if (description !== originalDescription) {
                 taskData.description = description;
             }
 
-            if (status) {
+            if (status && status !== originalStatus) {
                 taskData.status = parseInt(status);
             }
 
-            // Include assigned_to (null is valid for unassignment)
-            if (assignedTo) {
-                taskData.assigned_to = parseInt(assignedTo);
-            } else if (card.querySelector('.task-assigned').value === '') {
-                taskData.assigned_to = null;
+            // For assigned_to, handle both change and unassignment
+            const currentAssigned = assignedTo ? parseInt(assignedTo) : null;
+            const origAssigned = originalAssigned ? parseInt(originalAssigned) : null;
+            if (currentAssigned !== origAssigned) {
+                taskData.assigned_to = currentAssigned;
+            }
+
+            // Only proceed if there are changes (besides version)
+            if (Object.keys(taskData).length === 1) {
+                showToast('Nenhuma alteração detectada', 'info');
+                showLoading(false);
+                return;
             }
 
             await taigaAPI.updateTask(parseInt(taskId), taskData);
