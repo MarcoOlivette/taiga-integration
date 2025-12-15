@@ -300,9 +300,13 @@ class TaigaAPI {
     }
 
     // Get project members
-    async getProjectMembers(projectId) {
+    async getProjectMembers(projectId, slug = null) {
         try {
-            const members = await this.request(`/memberships?project=${projectId}`);
+            let url = `/memberships?project=${projectId}`;
+            if (slug) {
+                url += `&slug=${slug}`;
+            }
+            const members = await this.request(url);
             return members;
         } catch (error) {
             console.error('Get project members error:', error);

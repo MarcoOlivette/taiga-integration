@@ -296,10 +296,10 @@ def get_task_statuses(project_id: int):
 
 
 @router.get("/projects/{project_id}/members")
-def get_project_members(project_id: int):
+def get_project_members(project_id: int, slug: str = None):
     """Get project members"""
     try:
-        members = taiga_service.get_project_members(project_id)
+        members = taiga_service.get_project_members(project_id, slug)
         return {"success": True, "data": members}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

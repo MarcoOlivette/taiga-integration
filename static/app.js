@@ -612,7 +612,36 @@ async function loadTaskStatuses(projectId) {
 
 async function loadProjectMembers(projectId) {
     try {
-        appState.projectMembers = await taigaAPI.getProjectMembers(projectId);
+        const slug = appState.currentProject?.slug;
+        const cacheKey = `project_members_${projectId}`;
+
+        // Try to load from cache first
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                // Check if cache is fresh (e.g., less than 1 hour)
+                const cacheTime = parsed.timestamp;
+                const now = Date.now();
+                if (now - cacheTime < 3600000) { // 1 hour
+                    console.log('Using cached members');
+                    appState.projectMembers = parsed.data;
+                    return;
+                }
+            } catch (e) {
+                localStorage.removeItem(cacheKey);
+            }
+        }
+
+        // Fetch from API with slug for full list
+        appState.projectMembers = await taigaAPI.getProjectMembers(projectId, slug);
+
+        // Save to cache
+        localStorage.setItem(cacheKey, JSON.stringify({
+            timestamp: Date.now(),
+            data: appState.projectMembers
+        }));
+
     } catch (error) {
         console.error('Error loading project members:', error);
     }
