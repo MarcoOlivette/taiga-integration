@@ -1,5 +1,7 @@
 // Import utilities
 import { escapeHtml, normalizeString, isCurrentUser, getSortedMembers } from './js/core/utils.js';
+// Import API client
+import { taigaAPI } from './js/core/api.js';
 
 // Application State
 const appState = {
