@@ -321,24 +321,79 @@ function renderUserStories(stories) {
         return;
     }
 
-    list.innerHTML = stories.map(story => `
-        <div class="story-card" data-story-id="${story.id}">
-            <div class="story-ref">#${story.ref}</div>
-            <div class="story-content">
-                <h4>${escapeHtml(story.subject)}</h4>
-                ${story.description ? `<p>${escapeHtml(story.description.substring(0, 100))}${story.description.length > 100 ? '...' : ''}</p>` : ''}
-            </div>
-            <div class="story-status" style="background: ${story.status_extra_info?.color || '#666'}">${escapeHtml(story.status_extra_info?.name || 'N/A')}</div>
-        </div>
-    `).join('');
+    // Get favorite US
+    const favoriteUS = localStorage.getItem('favoriteUserStory');
 
-    // Add click handlers
+    // Sort: favorite first, then by ref
+    const sortedStories = [...stories].sort((a, b) => {
+        const aIsFavorite = String(a.id) === favoriteUS;
+        const bIsFavorite = String(b.id) === favoriteUS;
+
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+
+        return b.ref - a.ref; // Descending by ref
+    });
+
+    list.innerHTML = sortedStories.map(story => {
+        const isFavorite = String(story.id) === favoriteUS;
+        return `
+            <div class="story-card ${isFavorite ? 'favorite' : ''}" data-story-id="${story.id}">
+                <div class="story-ref">#${story.ref}</div>
+                <div class="story-content">
+                    <h4>${isFavorite ? '⭐ ' : ''}${escapeHtml(story.subject)}</h4>
+                    ${story.description ? `<p>${escapeHtml(story.description.substring(0, 100))}${story.description.length > 100 ? '...' : ''}</p>` : ''}
+                </div>
+                <div class="story-actions">
+                    <button 
+                        class="favorite-btn ${isFavorite ? 'active' : ''}" 
+                        data-story-id="${story.id}"
+                        title="${isFavorite ? 'Remover dos favoritos' : 'Marcar como favorita'}"
+                    >
+                        ${isFavorite ? '⭐' : '☆'}
+                    </button>
+                </div>
+                <div class="story-status" style="background: ${story.status_extra_info?.color || '#666'}">${escapeHtml(story.status_extra_info?.name || 'N/A')}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Add click handlers for cards
     list.querySelectorAll('.story-card').forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', (e) => {
+            // Don't select if clicking favorite button
+            if (e.target.closest('.favorite-btn')) return;
+
             const storyId = card.dataset.storyId;
             selectUserStory(storyId);
         });
     });
+
+    // Add favorite button handlers
+    list.querySelectorAll('.favorite-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFavoriteUserStory(btn.dataset.storyId);
+        });
+    });
+}
+
+// Toggle favorite user story
+function toggleFavoriteUserStory(storyId) {
+    const currentFavorite = localStorage.getItem('favoriteUserStory');
+
+    if (currentFavorite === String(storyId)) {
+        // Remove favorite
+        localStorage.removeItem('favoriteUserStory');
+        showToast('User Story removida dos favoritos', 'info');
+    } else {
+        // Set as favorite (only one allowed)
+        localStorage.setItem('favoriteUserStory', String(storyId));
+        showToast('⭐ User Story marcada como favorita!', 'success');
+    }
+
+    // Re-render to update UI
+    renderUserStories(appState.userStories);
 }
 
 // Load Epics

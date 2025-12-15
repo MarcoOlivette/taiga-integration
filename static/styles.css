@@ -630,6 +630,48 @@ body {
   font-weight: 500;
 }
 
+/* Favorite User Story */
+.story-card.favorite {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(124, 58, 237, 0.02) 100%);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.story-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.favorite-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: all var(--transition-base);
+  opacity: 0.5;
+}
+
+.favorite-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.favorite-btn.active {
+  opacity: 1;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
 /* Tasks */
 .tasks-actions {
   display: flex;
