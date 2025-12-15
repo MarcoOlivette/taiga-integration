@@ -731,18 +731,36 @@ function createTaskCard(task, isNew = false) {
 }
 
 // Sort members: current user first, then alphabetically
+// Helper to identify current user in member list
+function isCurrentUser(member) {
+    if (!appState.currentUser) return false;
+
+    // Check ID first
+    if (member.user === appState.currentUser.id) return true;
+
+    // Check full name exact match (case insensitive)
+    const memberName = (member.full_name || member.full_name_display || '').trim().toLowerCase();
+    const currentName = (appState.currentUser.full_name || '').trim().toLowerCase();
+
+    // Check username if available
+    const memberUsername = (member.username || '').trim().toLowerCase();
+    const currentUsername = (appState.currentUser.username || '').trim().toLowerCase();
+
+    return (memberName && memberName === currentName) || (memberUsername && memberUsername === currentUsername);
+}
+
 function getSortedMembers() {
     if (!appState.projectMembers) return [];
 
     const members = [...appState.projectMembers];
-    const currentUserId = appState.currentUser?.id;
 
     return members.sort((a, b) => {
         // Current user always first
-        if (currentUserId) {
-            if (a.user === currentUserId) return -1;
-            if (b.user === currentUserId) return 1;
-        }
+        const aIsUser = isCurrentUser(a);
+        const bIsUser = isCurrentUser(b);
+
+        if (aIsUser && !bIsUser) return -1;
+        if (!aIsUser && bIsUser) return 1;
 
         // Then sort alphabetically by full_name
         const nameA = (a.full_name || a.full_name_display || '').toLowerCase();
@@ -752,6 +770,8 @@ function getSortedMembers() {
 }
 
 function createTaskForm(task = {}) {
+    const isNew = !task.id;
+
     return `
         <input type="text" class="task-subject" placeholder="Título da tarefa" value="${escapeHtml(task.subject || '')}" required>
         <textarea class="task-description" placeholder="Descrição (opcional)">${escapeHtml(task.description || '')}</textarea>
@@ -771,15 +791,18 @@ function createTaskForm(task = {}) {
             <select class="task-assigned" size="8">
                 <option value="">Não atribuído</option>
                 ${getSortedMembers().map(member => {
-        const isCurrentUser = appState.currentUser && member.user === appState.currentUser.id;
+        const isUser = isCurrentUser(member);
         const displayName = member.full_name || member.full_name_display || 'Sem nome';
-        const star = isCurrentUser ? '⭐ ' : '';
+        const star = isUser ? '⭐ ' : '';
+        // Pre-select if assigned match OR (is new task AND is current user)
+        const isSelected = task.assigned_to === member.user || (isNew && isUser && !task.assigned_to);
+
         return `
                         <option 
                             value="${member.user}" 
-                            ${task.assigned_to === member.user ? 'selected' : ''}
+                            ${isSelected ? 'selected' : ''}
                             data-search="${displayName.toLowerCase()} ${member.role_name?.toLowerCase() || ''}"
-                            style="${isCurrentUser ? 'font-weight: bold; background: #f0f7ff;' : ''}"
+                            style="${isUser ? 'font-weight: bold; background: #f0f7ff;' : ''}"
                         >
                             ${star}${escapeHtml(displayName)}${member.role_name ? ` (${member.role_name})` : ''}
                         </option>
