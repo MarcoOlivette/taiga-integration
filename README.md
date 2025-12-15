@@ -1,237 +1,172 @@
 # Taiga Bulk Task Manager 🚀
 
-Aplicação web para gerenciamento em massa de tarefas no Taiga, desenvolvida com FastAPI (backend) e HTML/CSS/JavaScript puro (frontend).
+Aplicação web poderosa para gerenciamento em massa de tarefas no Taiga, desenvolvida com FastAPI e HTML/CSS/JS moderno. Focada em produtividade e experiência do usuário (UX).
 
-## 📋 Funcionalidades
+## ✨ Principais Funcionalidades
 
-- ✅ Autenticação com Taiga
-- ✅ Listagem de projetos
-- ✅ Navegação por User Stories e Épicos
-- ✅ Criação em massa de tarefas
-- ✅ Edição de tarefas existentes
-- ✅ Interface moderna e responsiva
+### ⚡ Gestão de Tarefas
+
+- **Criação em Massa**: Adicione múltiplas tarefas de uma vez com um clique.
+- **Edição & Exclusão**: Modifique ou remova tarefas individualmente com facilidade.
+- **Controle Total**: Gerencie status, responsáveis e detalhes das tarefas.
+- **Preservação de Dados**: Edições em massa preservam descrições e outros campos importantes.
+
+### 🚀 Ações em Massa (Bulk Actions)
+
+- **Atribuição em Massa**: Vincule _todas_ as tarefas listadas a um membro com um único clique.
+  - _Smart User Select_: Identifica e destaca o usuário logado (⭐) automaticamente.
+  - _Fuzzy Search_: Busca inteligente de membros por nome ou cargo.
+- **Atualização de Status em Massa**: Mova todas as tarefas para um novo status instantaneamente.
+  - _Segurança_: Integrado com Controle de Concorrência Otimista (OCC) para evitar conflitos.
+
+### ⭐ Favoritos Persistentes (SQLite)
+
+- **Projetos Favoritos**: Salve seus projetos mais usados para acesso rápido.
+- **User Stories Favoritas**: Marque as user stories que você acessa frequentemente.
+- **Persistência Local**: Dados salvos em banco SQLite local (`favorites.db`).
+- **Sem Perda de Dados**: Favoritos mantidos mesmo após fechar o navegador.
+- **API RESTful**: Endpoints completos para gerenciar favoritos (ver `docs/FAVORITES_API.md`).
+
+### 🎨 Interface & UX
+
+- **Temas Claro & Escuro**: Alterne entre o modo Dark (padrão) e Light (inspirado no Taiga) com persistência automática.
+- **Design Responsivo**: Cores vibrantes, gradientes e layout que se adapta a qualquer tela.
+- **Feedback Rico**: Notificações toast, loaders e animações suaves.
+- **Listagem Completa**: Sem limite de paginação - visualize todas as tarefas de uma US.
 
 ## 🏗️ Estrutura do Projeto
 
 ```
 taiga-integration/
-├── app/                    # Lógica de negócio
-│   ├── __init__.py
-│   └── taiga_service.py   # Cliente da API do Taiga
-├── routes/                 # Rotas da API
-│   ├── __init__.py
-│   └── taiga_routes.py    # Endpoints FastAPI
-├── static/                 # Frontend
-│   ├── index.html         # Interface principal
-│   ├── styles.css         # Estilos modernos
-│   ├── config.js          # Configurações
-│   ├── api.js             # Cliente API (frontend)
-│   └── app.js             # Lógica da aplicação
-├── tests/                  # Testes
-│   └── test_taiga_integration.py
-├── main.py                 # Aplicação FastAPI
-├── requirements.txt        # Dependências Python
-├── .env                    # Variáveis de ambiente (não versionado)
-└── .env.example           # Exemplo de variáveis de ambiente
+├── app/                    # Lógica de negócio (Python)
+│   ├── taiga_service.py   # Wrapper robusto para API do Taiga
+│   ├── database.py        # Modelos SQLAlchemy para favoritos
+├── routes/                 # Rotas da API (FastAPI)
+│   ├── taiga_routes.py    # Endpoints Taiga
+│   ├── favorites_routes.py # Endpoints de favoritos
+├── static/                 # Frontend (Vanilla JS + CSS Variables)
+│   ├── index.html         # Interface Single Page Application
+│   ├── styles.css         # Design System com temas
+│   ├── app.js             # Lógica de UI e Estado
+│   ├── api.js             # Camada de cliente HTTP
+├── tests/                  # Testes de Integração
+│   ├── test_integration_full_flow.py    # Teste do fluxo completo
+│   ├── test_integration_favorites.py    # Teste de favoritos
+├── docs/                   # Documentação
+│   ├── FAVORITES_API.md   # API de favoritos
+├── favorites.db            # Banco SQLite (gerado automaticamente)
+├── main.py                 # Servidor de Aplicação
 ```
 
 ## 🚀 Instalação e Execução
 
-### 1. Clone o repositório
+### 1. Preparar Ambiente
 
 ```bash
 git clone git@github.com:MarcoOlivette/taiga-integration.git
 cd taiga-integration
-```
 
-### 2. Instale dependências do sistema (Ubuntu/Debian)
-
-```bash
-sudo apt update
-sudo apt install python3.12-venv
-```
-
-### 3. Crie e ative o ambiente virtual
-
-```bash
-# Criar ambiente virtual
+# Criar e ativar venv
 python3 -m venv venv
-
-# Ativar ambiente virtual
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
+source venv/bin/activate
 ```
 
-> ⚠️ **Importante**: Sempre ative o ambiente virtual antes de instalar dependências ou executar a aplicação!
+### 2. Configurar
 
-### 4. Configure o ambiente
+Copie o exemplo e adicione sua URL do Taiga:
 
 ```bash
-# Copie o arquivo de exemplo
 cp .env.example .env
-
-# Edite o .env com suas credenciais
 nano .env
 ```
 
-### 5. Instale as dependências Python
+### 3. Instalar Dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 6. Execute os testes (opcional)
+**Nota**: A partir da versão com favoritos, SQLAlchemy é uma dependência obrigatória.
 
-```bash
-# Teste de autenticação e listagem de projetos
-python tests/test_taiga_integration.py
-
-# Ou usando pytest
-pytest tests/test_taiga_integration.py -v -s
-```
-
-### 7. Inicie o servidor
+### 4. Rodar
 
 ```bash
 python main.py
 ```
 
-A aplicação estará disponível em: **http://localhost:3000**
+Acesse: **http://localhost:3000**
 
-> 💡 **Dica**: Para mais detalhes de instalação e troubleshooting, consulte [INSTALL.md](INSTALL.md)
+O banco de dados SQLite (`favorites.db`) será criado automaticamente na primeira execução.
 
-## 🧪 Testes
+## 📖 Guia de Uso
 
-O projeto inclui testes de integração que verificam:
+1. **Login**: Use suas credenciais do Taiga.
+2. **Navegação**: Selecione um Projeto -> User Story ou Épico.
+3. **Gerenciamento**:
+   - Use o painel superior para adicionar tarefas rapidamente.
+   - Use os painéis "Atribuição em Massa" e "Status em Massa" para alterações globais.
+   - Clique no ícone de Sol/Lua no topo para trocar o tema.
+4. **Favoritos**:
+   - Use a API de favoritos para salvar projetos e user stories.
+   - Consulte `docs/FAVORITES_API.md` para detalhes completos.
 
-1. **Autenticação**: Conexão com o Taiga e obtenção de token
-2. **Listagem de Projetos**: Busca de todos os projetos acessíveis
-3. **Fluxo Completo**: Auth → Projects → User Stories
+## 🔧 APIs Disponíveis
 
-Execute os testes:
+### Taiga API (`/api`)
 
-```bash
-# Teste simples
-python tests/test_taiga_integration.py
+- Projetos, User Stories, Épicos
+- Criação, edição e exclusão de tarefas
+- Criação em massa de tarefas
+- Status e membros do projeto
 
-# Com pytest (mais detalhado)
-pytest tests/test_taiga_integration.py -v -s
-```
+### Favorites API (`/api/favorites`)
 
-## 📡 API Endpoints
+- `GET/POST/DELETE /api/favorites/projects` - Gerenciar projetos favoritos
+- `GET/POST/DELETE /api/favorites/userstories` - Gerenciar user stories favoritas
 
-### Autenticação
+Ver documentação completa em `docs/FAVORITES_API.md`.
 
-- `POST /api/auth/login` - Login no Taiga
-- `GET /api/auth/me` - Usuário atual
+## 🛠️ Stack Tecnológica
 
-### Projetos
+- **Backend**: FastAPI, python-taiga, Pydantic, SQLAlchemy.
+- **Banco de Dados**: SQLite (favoritos locais).
+- **Frontend**: HTML5, CSS3 (CSS Variables for Theming), Vanilla JS (ES6+).
+- **Testes**: Pytest.
 
-- `GET /api/projects` - Listar projetos
-- `GET /api/projects/{id}` - Detalhes do projeto
-- `GET /api/projects/{id}/members` - Membros do projeto
+## 🧪 Testes de Integração
 
-### User Stories
-
-- `GET /api/projects/{id}/userstories` - Listar user stories
-- `GET /api/userstories/{id}` - Detalhes da user story
-
-### Épicos
-
-- `GET /api/projects/{id}/epics` - Listar épicos
-- `GET /api/epics/{id}` - Detalhes do épico
-
-### Tarefas
-
-- `GET /api/projects/{id}/tasks` - Listar tarefas
-- `POST /api/tasks` - Criar tarefa
-- `PATCH /api/tasks/{id}` - Atualizar tarefa
-- `DELETE /api/tasks/{id}` - Deletar tarefa
-- `POST /api/tasks/bulk` - Criar múltiplas tarefas
-
-## 🎨 Interface
-
-A interface foi desenvolvida com:
-
-- **Design moderno** com dark theme
-- **Cores vibrantes** e gradientes
-- **Animações suaves** e micro-interações
-- **Totalmente responsiva**
-- **Sem frameworks** - HTML/CSS/JS puro
-
-## 🔒 Segurança
-
-- Tokens armazenados em `localStorage` (frontend)
-- Refresh automático de tokens expirados
-- CORS configurado para desenvolvimento
-- Credenciais em `.env` (não versionado)
-
-## 📝 Variáveis de Ambiente
+Execute os testes de integração:
 
 ```bash
-# URL da API do Taiga
-TAIGA_API_URL=https://pista.decea.mil.br/api/v1
-TAIGA_AUTH_URL=https://pista.decea.mil.br/api/v1/auth
+# Teste do fluxo completo (criar US -> tarefas -> editar -> deletar)
+python -m pytest tests/test_integration_full_flow.py -v -s
 
-# Porta da aplicação
-APP_PORT=3000
-
-# Credenciais de teste (apenas desenvolvimento)
-TEST_USERNAME=seu_usuario
-TEST_PASSWORD=sua_senha
+# Teste de favoritos SQLite
+python -m pytest tests/test_integration_favorites.py -v -s
 ```
 
-## 🛠️ Tecnologias
+**Nota**: Os testes usam o projeto ID 367 (projeto de teste).
 
-### Backend
+## 📝 Changelog Recente
 
-- **FastAPI** - Framework web moderno e rápido
-- **python-taiga** - Wrapper Python para a API REST do Taiga
-- **Pydantic** - Validação de dados
-- **python-dotenv** - Gerenciamento de variáveis de ambiente
+### ✅ Correção de Bug Crítico
 
-### Frontend
+- **Fix**: Descrições de tarefas não são mais sobrescritas durante edições em massa.
+- **Implementação**: Busca completa dos dados da tarefa antes de atualizar.
 
-- **HTML5** - Estrutura semântica
-- **CSS3** - Estilos modernos com variáveis CSS
-- **JavaScript (ES6+)** - Lógica da aplicação
-- **Fetch API** - Requisições HTTP
+### ✅ Remoção de Limite de Paginação
 
-### Testes
+- **Fix**: Listagem de tarefas não está mais limitada a 30 itens.
+- **Implementação**: Header `x-disable-pagination: 1` em todas as requisições de tasks.
 
-- **pytest** - Framework de testes
-- **pytest-asyncio** - Suporte para testes assíncronos
+### ✅ Sistema de Favoritos
 
-## � Documentação
-
-- **[INSTALL.md](INSTALL.md)** - Guia completo de instalação e troubleshooting
-- **[docs/python-taiga-reference.md](docs/python-taiga-reference.md)** - Referência da biblioteca python-taiga
-- **[Documentação oficial do Taiga](https://docs.taiga.io/)**
-- **[python-taiga no GitHub](https://github.com/nephila/python-taiga)**
-
-## �📖 Como Usar
-
-1. **Login**: Acesse a aplicação e faça login com suas credenciais do Taiga
-2. **Selecione um Projeto**: Escolha o projeto que deseja gerenciar
-3. **Navegue**: Escolha entre User Stories ou Épicos
-4. **Gerencie Tarefas**:
-   - Visualize tarefas existentes
-   - Adicione novas tarefas (uma por uma ou em massa)
-   - Edite tarefas existentes
-   - Exclua tarefas
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+- **Feature**: Banco SQLite para persistência de favoritos.
+- **Benefício**: Projetos e user stories favoritos não são perdidos ao fechar o navegador.
 
 ## 📄 Licença
 
-Este projeto é de uso interno.
+Projeto de uso interno.
 
 ## 👤 Autor
 
@@ -239,4 +174,4 @@ Este projeto é de uso interno.
 
 ---
 
-⭐ Desenvolvido com FastAPI e ❤️
+⭐ Construído para agilidade.
